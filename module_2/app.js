@@ -1,17 +1,34 @@
-import http from "http";
-import { readFile, writeFile } from "fs";
-const path = "guests.json";
+import { writeFile, readFile } from 'fs';
+import * as http from 'http';
+
+const path = "./guests.json";
+
+async function readFileAsync(path) {
+  return new Promise((resolve, reject) => {
+      readFile(path, (err, data) => {
+          if (err) {
+              return reject(err);
+          }
+          return resolve(data);
+      });
+  });
+}
 
 async function displayGuestsData(req, res) {
   try {
-    const response = await fetch(path);
-    const data = await response.json();
+    const response = await readFileAsync(path);
+    const data = JSON.parse(response);
     res.setHeader('Content-Type', 'application/json');
-    res.write(JSON.stringify(JSON.parse(data)));
-    res.end();
+    for (const guest of data) {
+      res.write(`First Name: ${guest.firstName} Last Name: ${guest.lastName} Age: ${guest.age} Gender: ${guest.gender} Comments: ${guest.comments}\n\n`)
+    }
+    res.statusCode = 200;
+    return res.end();
   } catch (e) {
       console.log(e.message);
-      res.end();
+      res.statusCode = 400;
+      res.write(`${e.message}`);
+      return res.end();
   }
 }
 
@@ -29,14 +46,18 @@ async function routing(req, res) {
         <input id="lastName" name="lastName">
       </div><br>
       <div>
-        <label>Please select a gender</label><br>
+        <label for="age">Age</label>
+        <input type="number" id="age" name="age">
+      </div><br>
+      <div>
+        <label>Please select a gender:</label><br>
         <label for="male">Male</label>
         <input type="radio" id="male" name="gender" value="male">
         <label for="female">Female</label>
         <input type="radio" id="female" name="gender" value="female"><br>
       </div><br>
       <div>
-        <label for="comments">Leave a comment!</label><br>
+        <label for="comments">Leave a comment:</label><br>
         <textarea id="comments" name="comments" rows="4" cols="50"></textarea>
       </div>
       <input type="submit">
@@ -44,47 +65,53 @@ async function routing(req, res) {
     `);
     res.end();
  } else if (url.startsWith("/add")) {
-   // The add page
-   let body = '';
-   req.on('data', (chunk) => {
-       body += chunk;
-   });
+  readFile(path, function (err, data) {
+    if (err) {
+        console.log(`{err.message}`)
+        res.end();
+        return;
+    }
 
-   readFile(path, function (err, data) {
-     if (err) {
-       res.write(`<pre>Error: ${err.message}</pre>`);
-       res.end();
-       return;
-     }
+    // Try to read from the guestbook. If it fails, set the guest book to empty.
+    let guestBook = [];
+    try {
+        guestBook = JSON.parse(data);
+    } catch (e) {}
 
-     // Try to read from the guestbook. If it fails, set the guest book to empty
-     let guestBook = [];
-     try {
-       guestBook = JSON.parse(data);
-     } catch (e) {
-      console.log(e.message);
-      guestBook = [];
-     }
 
-     const [firstName, lastName, gender, comments] = body.split('&').map(el => el.split("=")[1]); // Get the part of the url after the first "?"
-     guestBook.push({ 
-      firstName: firstName, 
-      lastName: lastName,
-      gender: gender,
-      comments: comments
-    }); // Get the name param and add it to the guestbook
+    let body = '';
+    req.on('data', (chunk) => {
+        body += chunk;
+    });
+    req.on('end', () => {
+        res.write('OK');
+        res.end();
 
-     // Write the updated guestbook to the filesystem
-     writeFile(path, JSON.stringify(guestBook), (err) => {
-       if (err) {
-         res.write(`<pre>Error: ${err.message}</pre>`);
-         res.end();
-         return;
-       }
-      res.write(`<pre>Successfully added guest <b>${firstName}${lastName.length > 0 ? " " + lastName : ""}</b> to guest book!<pre>`); 
-       res.end();
-     });
-   });
+        // Get the name from the data
+        const searchParams = new URLSearchParams(body);
+        const firstName = searchParams.get("firstName");
+        const lastName = searchParams.get("lastName");
+        const age = searchParams.get("age");
+        const gender = searchParams.get("gender");
+        const comments = searchParams.get("comments");
+        
+      
+        // Add the name to the guestbook
+        guestBook.push( {firstName: firstName, lastName: lastName, age: age, gender: gender, comments: comments });
+        
+        // Write the updated guestbook to the filesystem
+        writeFile(path, JSON.stringify(guestBook), (err) => {
+            if (err) {
+                console.log('Error writing to file');
+                res.write("You should do some real error handling here");
+                res.end();
+                return;
+            }
+            res.write("Successfully updated the guestbook");
+            res.end();
+        });
+      });
+    });
   } else if (url.startsWith("/read")) {
     let guestBook = await displayGuestsData(req, res);
     console.log(guestBook);

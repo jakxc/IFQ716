@@ -1,22 +1,16 @@
-import { writeFile, readFile } from 'fs';
+import { writeFile, readFile, readFileSync } from 'fs';
 import * as http from 'http';
 
 const path = "./guests.json";
 
-async function readFileAsync(path) {
-  return new Promise((resolve, reject) => {
-      readFile(path, (err, data) => {
-          if (err) {
-              return reject(err);
-          }
-          return resolve(data);
-      });
-  });
-}
 
 async function displayGuestsData(req, res) {
   try {
-    const response = await readFileAsync(path);
+    const response = readFileSync(path, (err, data) => {
+      if (err) {
+        console.log(err);
+      } 
+    });
     const data = JSON.parse(response);
     res.setHeader('Content-Type', 'application/json');
     for (const guest of data) {

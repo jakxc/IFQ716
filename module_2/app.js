@@ -6,23 +6,20 @@ const path = "./guests.json";
 
 async function displayGuestsData(req, res) {
   try {
+    res.writeHead(200, { "Content-Type": "application/json" }); // 
     const response = readFileSync(path, (err, data) => {
       if (err) {
         console.log(err);
       } 
     });
     const data = JSON.parse(response);
-    res.setHeader('Content-Type', 'application/json');
     for (const guest of data) {
       res.write(`First Name: ${guest.firstName} Last Name: ${guest.lastName} Age: ${guest.age} Gender: ${guest.gender} Comments: ${guest.comments}\n\n`)
     }
-    res.statusCode = 200;
-    return res.end();
+    res.end();
   } catch (e) {
       console.log(e.message);
-      res.statusCode = 400;
-      res.write(`${e.message}`);
-      return res.end();
+      res.end(`${e.message}`);
   }
 }
 
@@ -82,23 +79,20 @@ async function routing(req, res) {
         res.end();
 
         // Get the name from the data
-        const searchParams = new URLSearchParams(body);
-        const firstName = searchParams.get("firstName");
-        const lastName = searchParams.get("lastName");
-        const age = searchParams.get("age");
-        const gender = searchParams.get("gender");
-        const comments = searchParams.get("comments");
+        const formData = new URLSearchParams(body);
+        const firstName = formData.get("firstName");
+        const lastName = formData.get("lastName");
+        const age = formData.get("age");
+        const gender = formData.get("gender");
+        const comments = formData.get("comments");
         
-      
         // Add the name to the guestbook
         guestBook.push( {firstName: firstName, lastName: lastName, age: age, gender: gender, comments: comments });
         
         // Write the updated guestbook to the filesystem
         writeFile(path, JSON.stringify(guestBook), (err) => {
             if (err) {
-                console.log('Error writing to file');
-                res.write("You should do some real error handling here");
-                res.end();
+                res.end(JSON.stringify({error: 'Failed to write to guestbook.'}));
                 return;
             }
             res.write("Successfully updated the guestbook");

@@ -1,0 +1,40 @@
+<script>
+    async function getForm(e){
+       e.preventDefault();
+       const cat = document.querySelector('#cat');
+       try {
+        const response = await fetch("http://localhost:3000/add", {
+        method: "POST", // or 'PUT'
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(cat),
+    });
+
+    const result = await response.json();
+    console.log("Success:", result);
+  } catch (error) {
+    console.error("Error:", error);
+  }
+   }
+
+    async function getData() {
+        let res = await fetch("http://localhost:3000/data", {method: "GET"});
+        let data = await res.json();
+        const sortedData = data.sort();
+        // console.log(data);
+
+        let dataDiv = document.getElementById("data");
+        for (const el of sortedData) {
+            dataDiv.innerHTML += `<div>${el}<div><br>`
+        }
+    }
+    getData();
+</script>
+
+<h1>Naughty Client</h1>
+<form id="form" action="/add" method="POST">
+    <input id="cat" name="cat"/>
+    <input type="submit"/>
+ </form>
+<div id="data"></div>

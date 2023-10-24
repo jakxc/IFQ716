@@ -1,5 +1,5 @@
 import * as http from "http";
-require("dotenv").config();
+import "dotenv/config";
 
 const API_KEY = process.env.WEATHERAPI_KEY;
 const WEATHERAPI_BASE = "http://api.weatherapi.com/v1";
@@ -11,8 +11,10 @@ async function weather(res) {
         res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
         res.write(JSON.stringify(data));
         res.end();
-    });
-    
+    })
+    .catch(err => {
+      res.write(err);
+    }); 
 }
 
 function routing(req, res) {
@@ -26,6 +28,6 @@ function routing(req, res) {
     res.end();
   }
 }
-createServer(routing).listen(3000, function () {
+http.createServer(routing).listen(3000, function () {
   console.log("server start at port 3000"); //the server object listens on port
 });

@@ -1,7 +1,5 @@
 import * as http from "http";
-import * as dotenv from 'dotenv'
-dotenv.config();
-import { getMovieByTitle, getMovieById } from "./utils.js"
+import { getRatingsById, getRatingsByTitle, getStreamingById, combineMovieData, getPosterById } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
 
@@ -14,18 +12,21 @@ const routing =  async (req, res) => {
             // get title from url
             const title = req.url.split("/")[3];
             // get movie
-            const movie = await getMovieByTitle(title);
+            const ratings = await getRatingsByTitle(title);
+            const streaming = await getStreamingById(ratings["id"]);
+            const combinedData = combineMovieData(ratings, streaming);
+            console.log(combinedData);
             const statusCode = title && title.length > 0
-                                ? movie["Error"] ? 500 : 200 
+                                ? combinedData["Error"] ? 500 : 200 
                             :   400;
-            const data = title && title.length > 0 
-                    ? movie["Error"] ? { "error": true, message: movie["Error"]} : movie
-                    : { "error": true, "message": "You must supply a title!" } 
+            const obj = title && title.length > 0 
+                    ?  combinedData["Error"] ? { "error": true, "message": combinedData["Error"] } : combinedData
+                    : { error: true, message: "You must supply a title!" } 
 
             // set the status code and content-type
             res.writeHead(statusCode, { "Content-Type": "application/json" });
             // send the data
-            res.end(JSON.stringify(data));
+            res.end(JSON.stringify(obj));
         } catch (err) {
             // set the status code and content-type
             res.writeHead(500, { "Content-Type": "application/json" });
@@ -34,47 +35,48 @@ const routing =  async (req, res) => {
         }
     } else if ((url.match(/\/movies\/data\/([a-zA-Z0-9])/) || url.startsWith("/movies/data/")) && method === 'GET') {
         try {
-            // get id from url
+            // get title from url
             const id = req.url.split("/")[3];
             // get movie
-            const movie = await getMovieById(id);
+            const ratings = await getRatingsById(id);
+            const streaming = await getStreamingById(id);
+            const combinedData = combineMovieData(ratings, streaming);
+            console.log(combinedData);
             const statusCode = id && id.length > 0
-                                ? movie["Error"] ? 500 : 200 
+                                ? combinedData["Error"] ? 500 : 200 
                             :   400;
-            const data = id && id.length > 0 
-                    ? movie["Error"] ? { "error": true, message: movie["Error"]} : movie
-                    : { "error": true, "message": "You must supply an imdbID!" } 
-
+                    const obj = id && id.length > 0 
+                    ?  combinedData["Error"] ? { error: true, message: combinedData["Error"] } : combinedData
+                    : { error: true, message: "You must supply an imdbID!" } 
 
             // set the status code and content-type
             res.writeHead(statusCode, { "Content-Type": "application/json" });
             // send the data
-            res.end(JSON.stringify(data));
+            res.end(JSON.stringify(obj));
         } catch (err) {
             // set the status code and content-type
             res.writeHead(500, { "Content-Type": "application/json" });
             // send the error
             res.end(JSON.stringify({ error: true, message: err }));
         }
-
     } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method === 'GET') {
         try {
             // get id from url
             const id = req.url.split("/")[2];
             // get movie
-            const movie = await getMovieById(id);
+            const poster = await getPosterById(id);
             const statusCode = id && id.length > 0
-                                ? movie["Error"] ? 500 : 200 
+                                ? poster["Error"] ? 500 : 200 
                             :   400;
-            const data = id && id.length > 0 
-                    ? movie["Error"] ? { "error": true, message: movie["Error"]} : movie["Poster"]
-                    : { "error": true, "message": "You must supply an imdbID!" } 
+            const obj = id && id.length > 0 
+                    ? poster["Error"] ? { error: true, message: poster["Error"]} : poster
+                    : { error: true, message: "You must supply an imdbID!" } 
 
 
             // set the status code and content-type
             res.writeHead(statusCode, { "Content-Type": "application/json" });
             // send the data
-            res.end(JSON.stringify(data));
+            res.end(JSON.stringify(obj));
         } catch (err) {
             // set the status code and content-type
             res.writeHead(500, { "Content-Type": "application/json" });

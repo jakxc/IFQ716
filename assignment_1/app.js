@@ -1,5 +1,11 @@
 import * as http from "http";
-import { getRatingsById, getRatingsByTitle, getStreamingById, combineMovieData, getPosterById } from "./utils.js"
+import { 
+    getMovieById, 
+    getMovieByTitle, 
+    getStreamingById, 
+    combineMovieData,
+    getMovieId, 
+    getMoviePoster } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
 
@@ -12,15 +18,12 @@ const routing =  async (req, res) => {
             // get title from url
             const title = req.url.split("/")[3];
             // get movie
-            const ratings = await getRatingsByTitle(title);
-            const streaming = await getStreamingById(ratings["id"]);
-            const combinedData = combineMovieData(ratings, streaming);
-            console.log(combinedData);
+            const movie = await getMovieByTitle(title);
             const statusCode = title && title.length > 0
-                                ? combinedData["Error"] ? 500 : 200 
+                                ? movie["Error"] ? 500 : 200 
                             :   400;
             const obj = title && title.length > 0 
-                    ?  combinedData["Error"] ? { "error": true, "message": combinedData["Error"] } : combinedData
+                    ?  movie["Error"] ? { error: true, message: movie["Error"] } : movie
                     : { error: true, message: "You must supply a title!" } 
 
             // set the status code and content-type
@@ -38,9 +41,9 @@ const routing =  async (req, res) => {
             // get title from url
             const id = req.url.split("/")[3];
             // get movie
-            const ratings = await getRatingsById(id);
-            const streaming = await getStreamingById(id);
-            const combinedData = combineMovieData(ratings, streaming);
+            const movie = await getMovieById(id);
+            const streaming = await getStreamingById(getMovieId(movie));
+            const combinedData = combineMovieData(movie, streaming);
             console.log(combinedData);
             const statusCode = id && id.length > 0
                                 ? combinedData["Error"] ? 500 : 200 
@@ -64,12 +67,12 @@ const routing =  async (req, res) => {
             // get id from url
             const id = req.url.split("/")[2];
             // get movie
-            const poster = await getPosterById(id);
+            const movie = await getMovieById(id);
             const statusCode = id && id.length > 0
-                                ? poster["Error"] ? 500 : 200 
+                                ? movie["Error"] ? 500 : 200 
                             :   400;
             const obj = id && id.length > 0 
-                    ? poster["Error"] ? { error: true, message: poster["Error"]} : poster
+                    ? movie["Error"] ? { error: true, message: movie["Error"]} : getMoviePoster(movie)
                     : { error: true, message: "You must supply an imdbID!" } 
 
 

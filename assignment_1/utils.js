@@ -7,25 +7,23 @@ const IMDB_URL = "http://www.omdbapi.com";
 const RAPID_API_KEY = process.env.RAPID_API_KEY;
 const RAPID_URL = "https://streaming-availability.p.rapidapi.com"
 
-export const getRatingsByTitle = async (title) => {
+export const getMovieByTitle = async (title) => {
     try {
-        const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&t=${title}`);
+        const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&s=${title}`);
         const data = await res.json();
         console.log(data);
-        if (data["Error"]) return data;
-        return { id: data["imdbID"] || "", title: data["Title"] || "", ratings: data["Ratings"] || [] };
+        return data;
     } catch (err) {
         console.log(err);
         return err;
     }
 }
 
-export const getRatingsById = async (id) => {
+export const getMovieById = async (id) => {
     try {
         const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&i=${id}`);
         const data = await res.json();
-        if (data["Error"]) return data;
-        return { id: data["imdbID"] || "", title: data["Title"] || "", ratings: data["Ratings"] || [] };
+        return data;
     } catch (err) {
         console.log(err);
         return err;
@@ -46,28 +44,23 @@ export const getStreamingById =  async (id) => {
         const res = await fetch(url, options);
         const data = await res.json();
         console.log(data);
-        return { id: data["imdbId"] || "", title: data["title"] || "", streamingInfo: data["result"] ? data["result"]["streamingInfo"] || {} : {} };
+        return data;
     } catch (err) {
         console.error(err);
         return err;
     }
 }
 
-export const combineMovieData = (ratingsData, streamingData) => {
-    let obj = Object.assign({}, ratingsData);
+export const combineMovieData = (movieData, streamingData) => {
 
-    if (ratingsData["Error"]) return ratingsData;
-    return {...obj, streamingInfo: streamingData["streamingInfo"] || {} };
+    if (movieData["Error"]) return movieData;
+    return { details: movieData || {}, streamingInfo: streamingData["streamingInfo"] || {} };
 }
 
-export const getPosterById = async (id) => {
-    try {
-        const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&i=${id}`);
-        const data = await res.json();
-        if (data["Error"]) return data;
-        return { poster: data["Poster"] || "" };
-    } catch (err) {
-        console.log(err);
-        return err;
-    }
+export const getMovieId = (movie) => {
+    return movie["imdbID"] ? movie["imdbID"] : "";
+}
+
+export const getMoviePoster = (movie) => {
+    return movie["Poster"] ? movie["Poster"] : "";
 }

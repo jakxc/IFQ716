@@ -4,7 +4,7 @@ import {
     getMovieByTitle, 
     getStreamingById, 
     combineMovieData,
-    getMovieId, 
+    getMovieId,
     getMoviePoster,
     convertUrlToImage
  } from "./utils.js"
@@ -16,73 +16,114 @@ const routing =  async (req, res) => {
     const method = req.method;
 
     if ((url.match(/\/movies\/search\/([a-zA-Z0-9])/) || url.startsWith("/movies/search/")) && method === 'GET') {
-         try {
+        let statusCode = 200;
+        let content = "";
+        try {
             // get title from url
             const title = req.url.split("/")[3];
             // get movie
-            const movie = await getMovieByTitle(title);
-            const statusCode = title && title.length > 0
-                                ? movie["Error"] ? 500 : 200 
-                            :   400;
-            const obj = title && title.length > 0 
-                    ?  movie["Error"] ? { error: true, message: movie["Error"] } : movie
-                    : { error: true, message: "You must supply a title!" } 
+            const movies = await getMovieByTitle(title);
+            console.log(movies);
+            switch (true) {
+                case (!title || title.length === 0):
+                    statusCode = 400;
+                    content = { error: true, message: "You must supply a title!" };
+                    break;
+                case (movies["Error"]):
+                    statusCode = 500;
+                    content = { error: true, message: movies["Error"] };
+                    break;
+                default:
+                    statusCode = 200;
+                    content = movies;
+                    break;
+            }
 
-            // set the status code and content-type
-            res.writeHead(statusCode, { "Content-Type": "application/json" });
-            // send the data
-            res.end(JSON.stringify(obj));
+            res.writeHead(statusCode, {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+            });
+            res.write(JSON.stringify(content));
+            res.end();
         } catch (err) {
-            // set the status code and content-type
-            res.writeHead(500, { "Content-Type": "application/json" });
-            // send the error
-            res.end(JSON.stringify({ error: true, message: err }));
+            res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
     } else if ((url.match(/\/movies\/data\/([a-zA-Z0-9])/) || url.startsWith("/movies/data/")) && method === 'GET') {
+        let statusCode = 200;
+        let content = "";
         try {
-            // get title from url
+            // get id from url
             const id = req.url.split("/")[3];
-            // get movie
             const movie = await getMovieById(id);
             const streaming = await getStreamingById(getMovieId(movie));
             const combinedData = combineMovieData(movie, streaming);
-            console.log(combinedData);
-            const statusCode = id && id.length > 0
-                                ? combinedData["Error"] ? 500 : 200 
-                            :   400;
-                    const obj = id && id.length > 0 
-                    ?  combinedData["Error"] ? { error: true, message: combinedData["Error"] } : combinedData
-                    : { error: true, message: "You must supply an imdbID!" } 
 
-            // set the status code and content-type
-            res.writeHead(statusCode, { "Content-Type": "application/json" });
-            // send the data
-            res.end(JSON.stringify(obj));
+            switch (true) {
+                case (!id || id.length === 0):
+                    statusCode = 400;
+                    content = { error: true, message: "You must supply an imdbID!" };
+                    break;
+                case (movie["Error"]):
+                    statusCode = 500;
+                    content = { error: true, message: movie["Error"] };
+                    break;
+                default:
+                    statusCode = 200;
+                    content = combinedData;
+                    break;
+            }
+
+            res.writeHead(statusCode, {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+            });
+            res.write(JSON.stringify(content));
+            res.end();
         } catch (err) {
-            // set the status code and content-type
-            res.writeHead(500, { "Content-Type": "application/json" });
             // send the error
-            res.end(JSON.stringify({ error: true, message: err }));
+            res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
     } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method === 'GET') {
+        let statusCode = 200;
+        let type = "image/png";
+        let content = "";
         try {
             // get id from url
+
             const id = req.url.split("/")[2];
             // get movie
             const movie = await getMovieById(id);
-            const statusCode = id || id.length > 0 ? 200 : 400;
-            const url = movie["Error"] ? "" : getMoviePoster(movie);
-            console.log(url);
-            const imageFile = await convertUrlToImage(url);
-            // set the status code and content-type
-            // console.log(imageBuffer);
-            res.writeHead(statusCode, { "Content-Type": "image/png" });
-            // send the data
-            console.log(imageFile)
-            res.end(imageFile);
+            console.log(movie)
+            switch (true) {
+                case (!id || id.length === 0):
+                    statusCode = 400;
+                    type = "application/json"
+                    content = { error: true, message: "You must supply an imdbID!" };
+                    break;
+                case (movie["Error"]):
+                    statusCode = 500;
+                    type = "application/json"
+                    content = { error: true, message: movie["Error"] };
+                    break;
+                case (!movie["Poster"]): 
+                    statusCode = 500;
+                    type = "image/png";
+                    content = { error: true, message: "No poster found for this id." };
+                    break;
+                default:
+                    statusCode = 200;
+                    url = getMoviePoster(movie);
+                    console.log("poster url: " + url);
+                    content = await convertUrlToImage(url);       
+                    break;
+            }
+            res.writeHead(statusCode, { "Content-Type": `${type}` });
+            res.write(content);
+            res.end();
         } catch (err) {
             // send the error
-            res.end(JSON.stringify({ error: true, message: err }));
+            console.log("error: " + err);
+            res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
     } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === 'POST') {
         // set the status code and content-type
@@ -94,15 +135,15 @@ const routing =  async (req, res) => {
             const movie = await getMovieById(id);
             const statusCode = id || id.length > 0 ? 200 : 400;
             const url = movie["Error"] ? "" : getMoviePoster(movie);
-            const imageBuffer =  convertUrlToFile(url);
+            const imageBuffer =  convertUrlToImage(url);
 
             // send the data
-            res.send(imageBuffer);
+            res.end(imageBuffer);
         } catch (err) {
             // set the status code and content-type
             res.writeHead(500, { "Content-Type": "application/json" });
             // send the error
-            res.end(JSON.stringify({ error: true, message: err }));
+            res.end(JSON.stringify({ error: true, message: err["message"] }));
         } 
     } else {
         // No page matched the url

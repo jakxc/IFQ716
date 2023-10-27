@@ -1,10 +1,11 @@
-import * as dotenv from 'dotenv'
+import * as dotenv from 'dotenv';
+
 dotenv.config();
 
-const IMDB_API_KEY = process.env.IMDB_API_KEY;
+const IMDB_API_KEY = process.env.IMDBAPI_KEY;
 const IMDB_URL = "http://www.omdbapi.com";
 
-const RAPID_API_KEY = process.env.RAPID_API_KEY;
+const RAPID_API_KEY = process.env.RAPIDAPI_KEY;
 const RAPID_URL = "https://streaming-availability.p.rapidapi.com"
 
 export const getMovieByTitle = async (title) => {
@@ -63,4 +64,15 @@ export const getMovieId = (movie) => {
 
 export const getMoviePoster = (movie) => {
     return movie["Poster"] ? movie["Poster"] : "";
+}
+
+export const convertUrlToImage = async (url) => {
+    const res = await fetch(url)
+    const imageBuffer = await res.arrayBuffer();
+    const arr = new Uint8Array(imageBuffer);
+    const file = new File(arr, "image.png", {
+        type: "img/png",
+      });
+
+    return file;
 }

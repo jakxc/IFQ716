@@ -6,7 +6,7 @@ import {
     combineMovieData,
     getMovieId,
     getMoviePoster,
-    convertUrlToImage
+    imageUrlToBase64
  } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
@@ -93,58 +93,53 @@ const routing =  async (req, res) => {
             const id = req.url.split("/")[2];
             // get movie
             const movie = await getMovieById(id);
-            console.log(movie)
-            switch (true) {
-                case (!id || id.length === 0):
-                    statusCode = 400;
-                    type = "application/json"
-                    content = { error: true, message: "You must supply an imdbID!" };
-                    break;
-                case (movie["Error"]):
-                    statusCode = 500;
-                    type = "application/json"
-                    content = { error: true, message: movie["Error"] };
-                    break;
-                case (!movie["Poster"]): 
-                    statusCode = 500;
-                    type = "image/png";
-                    content = { error: true, message: "No poster found for this id." };
-                    break;
-                default:
-                    statusCode = 200;
-                    url = getMoviePoster(movie);
-                    console.log("poster url: " + url);
-                    content = await convertUrlToImage(url);       
-                    break;
-            }
-            res.writeHead(statusCode, { "Content-Type": `${type}` });
-            res.write(content);
+            const url = getMoviePoster(movie);
+            const base64String = await imageUrlToBase64(url);
+            // switch (true) {
+            //     case (!id || id.length === 0):
+            //         statusCode = 400;
+            //         type = "application/json"
+            //         content = { error: true, message: "You must supply an imdbID!" };
+            //         break;
+            //     case (movie["Error"]):
+            //         statusCode = 500;
+            //         type = "application/json"
+            //         content = { error: true, message: movie["Error"] };
+            //         break;
+            //     case (!movie["Poster"]): 
+            //         statusCode = 500;
+            //         type = "image/png";
+            //         content = { error: true, message: "No poster found for this id." };
+            //         break;
+            //     default:
+            //         statusCode = 200;
+            //         url = getMoviePoster(movie);
+            //         console.log("poster url: " + url);
+            //         content = await imageUrlToBase64(url);       
+            //         break;
+            // }
+            res.writeHead(statusCode, { "Content-Type": "image/png", "Content-Length": base64String.length});
+            res.write(base64String);
             res.end();
         } catch (err) {
             // send the error
             console.log("error: " + err);
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
-    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === 'POST') {
+    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
         // set the status code and content-type
-        res.writeHead(statusCode, { "Content-Type": "image/png" });
-        try {
-            // get id from url
+        res.writeHead(200, { "Content-Type": "image/png" });
+        let body = '';
+        req.on('data', (chunk) => {
+            body += chunk;
+        });
+        req.on('end', () => {
             const id = req.url.split("/")[2];
-            // get movie
-            const movie = await getMovieById(id);
-            const statusCode = id || id.length > 0 ? 200 : 400;
-            const url = movie["Error"] ? "" : getMoviePoster(movie);
-            const imageBuffer =  convertUrlToImage(url);
-
-            // send the data
-            res.end(imageBuffer);
-        } catch (err) {
-            // set the status code and content-type
-            res.writeHead(500, { "Content-Type": "application/json" });
-            // send the error
-            res.end(JSON.stringify({ error: true, message: err["message"] }));
-        } 
+            const formData = new URLSearchParams(body);
+            const imageFile = formData.get("imageFile");
+            res.write(`${id} poster image has been successfully added!`);
+            res.end();   
+        })
     } else {
         // No page matched the url
         res.write("No matching page");

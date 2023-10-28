@@ -12,10 +12,10 @@ export const getMovieByTitle = async (title) => {
     try {
         const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&s=${title}`);
         const data = await res.json();
-        // console.log(data);
+        console.log(data);
         return data;
     } catch (err) {
-        // console.log(err);
+        console.log(err);
         return err;
     }
 }
@@ -53,7 +53,6 @@ export const getStreamingById =  async (id) => {
 }
 
 export const combineMovieData = (movieData, streamingData) => {
-
     if (movieData["Error"]) return movieData;
     return { details: movieData || {}, streamingInfo: streamingData["result"] 
     ? streamingData["result"]["streamingInfo"] ? streamingData["result"]["streamingInfo"] : {} 
@@ -68,14 +67,15 @@ export const getMoviePoster = (movie) => {
     return movie["Poster"] ? movie["Poster"] : "";
 }
 
-export const convertUrlToImage = async (url) => {
-    const res = await fetch(url)
-    const imageBuffer = await res.arrayBuffer();
-    const arr = new Uint8Array(imageBuffer);
-    const file = new File(arr, "image.png", {
-        type: "img/png",
-    });
-    
-    console.log(file);
-    return file;
+export const imageUrlToBase64 =  async (url) => {
+    try {
+        const res = await fetch(url);
+        const blob = await res.arrayBuffer();
+        const base64String = `data:image/png;base64,${Buffer.from(
+            blob,
+        ).toString('base64')}`;
+        return base64String;
+    } catch (err) {
+        console.log(err);
+    }
 }

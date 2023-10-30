@@ -6,7 +6,7 @@ import {
     combineMovieData,
     getMovieId,
     getMoviePoster,
-    imageUrlToBase64
+    imageUrlToBuffer
  } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
@@ -94,7 +94,7 @@ const routing =  async (req, res) => {
             // get movie
             const movie = await getMovieById(id);
             const url = getMoviePoster(movie);
-            const base64String = await imageUrlToBase64(url);
+            const buffer = await imageUrlToBuffer(url);
             // switch (true) {
             //     case (!id || id.length === 0):
             //         statusCode = 400;
@@ -118,8 +118,8 @@ const routing =  async (req, res) => {
             //         content = await imageUrlToBase64(url);       
             //         break;
             // }
-            res.writeHead(statusCode, { "Content-Type": "image/png", "Content-Length": base64String.length});
-            res.write(base64String);
+            res.writeHead(statusCode, { "Content-Type": `${type}` });
+            res.write(buffer);
             res.end();
         } catch (err) {
             // send the error

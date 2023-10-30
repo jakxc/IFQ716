@@ -67,14 +67,13 @@ export const getMoviePoster = (movie) => {
     return movie["Poster"] ? movie["Poster"] : "";
 }
 
-export const imageUrlToBase64 =  async (url) => {
+export const imageUrlToBuffer =  async (url) => {
     try {
         const res = await fetch(url);
-        const blob = await res.arrayBuffer();
-        const base64String = `data:image/png;base64,${Buffer.from(
-            blob,
-        ).toString('base64')}`;
-        return base64String;
+        const blob = await res.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const imageBuffer = Buffer.from(arrayBuffer);
+        return imageBuffer;
     } catch (err) {
         console.log(err);
     }

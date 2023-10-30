@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+import { writeFile, existsSync } from 'fs';
 
 dotenv.config();
 
@@ -53,18 +54,30 @@ export const getStreamingById =  async (id) => {
 }
 
 export const combineMovieData = (movieData, streamingData) => {
-    if (movieData["Error"]) return movieData;
-    return { details: movieData || {}, streamingInfo: streamingData["result"] 
-    ? streamingData["result"]["streamingInfo"] ? streamingData["result"]["streamingInfo"] : {} 
-    : {} };
+    if (movieData["Error"] || streamingData["message"]) return { error: true, message: movieData["Error"] || streamingData["message"] };
+    return { 
+        details: movieData || {}, 
+        streamingInfo: streamingData["result"] 
+        ? streamingData["result"]["streamingInfo"] ? streamingData["result"]["streamingInfo"] : {} 
+        : {} };
 }
 
 export const getMovieId = (movie) => {
-    return movie["imdbID"] ? movie["imdbID"] : "";
+    if (!movie["imdbID"]) {
+       console.log("No imbd ID found.");
+       return null;
+    } 
+
+    return movie["imdbID"]
 }
 
 export const getMoviePoster = (movie) => {
-    return movie["Poster"] ? movie["Poster"] : "";
+    if (!movie["Poster"]) {
+        console.log("No movie poster found.")
+        return null;
+    } 
+    
+    return movie["Poster"] ;
 }
 
 export const imageUrlToBuffer =  async (url) => {
@@ -76,5 +89,22 @@ export const imageUrlToBuffer =  async (url) => {
         return imageBuffer;
     } catch (err) {
         console.log(err);
+        return err;
+    }
+}
+
+export const writeToFile = (path, data) => {
+    if (existsSync(path)) {
+        return { error: true, message: "This data file already exists!" };
+    } else {
+        // Write the data to the filesystem
+        writeFile(path, data, (err) => {
+            if (err) {
+                console.log(err)
+                return { error: true, message: err["message"] };
+            }
+            
+            return { error: false, message: "Successfully added data to file" };
+        });
     }
 }

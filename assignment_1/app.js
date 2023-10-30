@@ -4,9 +4,9 @@ import {
     getMovieByTitle, 
     getStreamingById, 
     combineMovieData,
-    getMovieId,
     getMoviePoster,
-    imageUrlToBuffer
+    imageUrlToBuffer,
+    writeToFile
  } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
@@ -55,17 +55,18 @@ const routing =  async (req, res) => {
             // get id from url
             const id = req.url.split("/")[3];
             const movie = await getMovieById(id);
-            const streaming = await getStreamingById(getMovieId(movie));
+            const streaming = await getStreamingById(id);
             const combinedData = combineMovieData(movie, streaming);
 
             switch (true) {
                 case (!id || id.length === 0):
                     statusCode = 400;
-                    content = { error: true, message: "You must supply an imdbID!" };
+                    content = { error: true, message: "You must supply an imdb ID!" };
                     break;
-                case (movie["Error"]):
+                case (combinedData["error"]):
+                    console.log(combinedData)
                     statusCode = 500;
-                    content = { error: true, message: movie["Error"] };
+                    content = combinedData;
                     break;
                 default:
                     statusCode = 200;
@@ -87,57 +88,77 @@ const routing =  async (req, res) => {
         let statusCode = 200;
         let type = "image/png";
         let content = "";
+       
         try {
             // get id from url
-
             const id = req.url.split("/")[2];
             // get movie
             const movie = await getMovieById(id);
-            const url = getMoviePoster(movie);
-            const buffer = await imageUrlToBuffer(url);
-            // switch (true) {
-            //     case (!id || id.length === 0):
-            //         statusCode = 400;
-            //         type = "application/json"
-            //         content = { error: true, message: "You must supply an imdbID!" };
-            //         break;
-            //     case (movie["Error"]):
-            //         statusCode = 500;
-            //         type = "application/json"
-            //         content = { error: true, message: movie["Error"] };
-            //         break;
-            //     case (!movie["Poster"]): 
-            //         statusCode = 500;
-            //         type = "image/png";
-            //         content = { error: true, message: "No poster found for this id." };
-            //         break;
-            //     default:
-            //         statusCode = 200;
-            //         url = getMoviePoster(movie);
-            //         console.log("poster url: " + url);
-            //         content = await imageUrlToBase64(url);       
-            //         break;
-            // }
-            res.writeHead(statusCode, { "Content-Type": `${type}` });
-            res.write(buffer);
+            const posterUrl = getMoviePoster(movie);
+            
+            switch (true) {
+                case (!id || id.length === 0):
+                    statusCode = 400;
+                    type = "application/json"
+                    content = { error: true, message: "You must supply an imdbID!" };
+                    break;
+                case (movie["Error"]):
+                    statusCode = 500;
+                    type = "application/json"
+                    content = { error: true, message: movie["Error"] };
+                    break;
+                case (!posterUrl): 
+                    statusCode = 500;
+                    type = "application/json";
+                    content = { error: true, message: "No poster found for this id." };
+                    break;
+                case (imageUrlToBuffer(posterUrl)["error"]):
+                    statusCode = 500;
+                    type = "application/json";
+                    content = { error: true, message: "Unable to retrieve poster." };
+                    break;
+                default:
+                    statusCode = 200;
+                    type = "image/png";
+                    content = await imageUrlToBuffer(posterUrl);       
+                    break;
+            }
+            res.writeHead(statusCode, { 
+                "Content-Type": `${type}`,
+                "Access-Control-Allow-Origin": "*",
+            });
+            res.write(content);
             res.end();
         } catch (err) {
-            // send the error
-            console.log("error: " + err);
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
     } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
         // set the status code and content-type
-        res.writeHead(200, { "Content-Type": "image/png" });
-        let body = '';
-        req.on('data', (chunk) => {
-            body += chunk;
+        res.writeHead(200, { 
+            "Content-Type": "image/png", 
+            "Access-Control-Allow-Origin": "*",
         });
-        req.on('end', () => {
-            const id = req.url.split("/")[2];
-            const formData = new URLSearchParams(body);
-            const imageFile = formData.get("imageFile");
-            res.write(`${id} poster image has been successfully added!`);
+        let body = [];
+        req.on("data", (chunk) => {
+            body.push(chunk);
+        });
+        req.on("end", () => {
+            const id = req.url.split("/")[3];
+            const data = Buffer.concat(body);
+
+            const response = writeToFile(`./posters/${id}.png`, data);
+            if (response["error"]) {
+                res.write(JSON.stringify({
+                    "error": true,
+                    "message": response["message"]
+                }));
+            } else {  
+                res.write(JSON.stringify({
+                    "error": false,
+                    "message": "Poster Uploaded Successfully"
+                }));
+            }
+
             res.end();   
         })
     } else {

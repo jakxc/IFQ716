@@ -6,7 +6,8 @@ import {
     combineMovieData,
     getMoviePoster,
     imageUrlToBuffer,
-    writeToFile
+    writeToFile,
+    readFromFile
  } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
@@ -21,8 +22,11 @@ const routing =  async (req, res) => {
         try {
             // get title from url
             const title = req.url.split("/")[3];
+            // get page from url
+            const page = req.url.split("/")[4] || 1;
+
             // get movie
-            const movies = await getMovieByTitle(title);
+            const movies = await getMovieByTitle(title, page);
             console.log(movies);
             switch (true) {
                 case (!title || title.length === 0):
@@ -120,7 +124,9 @@ const routing =  async (req, res) => {
                 default:
                     statusCode = 200;
                     type = "image/png";
-                    content = await imageUrlToBuffer(posterUrl);       
+                    const imageBuffer = await imageUrlToBuffer(posterUrl);   
+                    const filePath = `./posters/${id}.png`
+                    content = imageBuffer;    
                     break;
             }
             res.writeHead(statusCode, { 

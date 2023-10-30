@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import { writeFile, existsSync } from 'fs';
+import { writeFile, readFile, existsSync } from 'fs';
 
 dotenv.config();
 
@@ -9,12 +9,12 @@ const IMDB_URL = "http://www.omdbapi.com";
 const RAPID_API_KEY = process.env.RAPIDAPI_KEY;
 const RAPID_URL = "https://streaming-availability.p.rapidapi.com"
 
-export const getMovieByTitle = async (title) => {
+export const getMovieByTitle = async (title, currentPage = 1) => {
     try {
-        const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&s=${title}`);
+        const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&s=${title}&page=${currentPage}`);
         const data = await res.json();
         console.log(data);
-        return data;
+        return { ...data, currentPage: currentPage };
     } catch (err) {
         console.log(err);
         return err;
@@ -93,6 +93,17 @@ export const imageUrlToBuffer =  async (url) => {
     }
 }
 
+export const readFromFile = (path) => {
+    readFile(path, (err, data) => {
+        if (err) {
+            console.log(err);
+            return { error: true, message: err["message"] }
+        };
+
+        return data; 
+    });
+}
+
 export const writeToFile = (path, data) => {
     if (existsSync(path)) {
         return { error: true, message: "This data file already exists!" };
@@ -104,7 +115,9 @@ export const writeToFile = (path, data) => {
                 return { error: true, message: err["message"] };
             }
             
-            return { error: false, message: "Successfully added data to file" };
+            return readFromFile(path);
         });
     }
 }
+
+

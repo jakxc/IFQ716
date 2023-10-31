@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import { writeFile, readFile, existsSync } from 'fs';
+import { writeFileSync, existsSync } from 'fs';
 
 dotenv.config();
 
@@ -14,10 +14,14 @@ export const getMovieByTitle = async (title, currentPage = 1) => {
         const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&s=${title}&page=${currentPage}`);
         const data = await res.json();
         console.log(data);
-        return { ...data, currentPage: currentPage };
+        currentPage = parseInt(currentPage);
+        return { 
+            ...data, 
+            prevPage: !data["totalResults"] || currentPage <= 1 ? "N/A" : currentPage - 1, 
+            nextPage: !data["totalResults"] || currentPage >= Math.ceil(parseInt(data["totalResults"]) / 10) ? "N/A" : currentPage + 1 };
     } catch (err) {
         console.log(err);
-        return err;
+        throw err;
     }
 }
 
@@ -28,7 +32,7 @@ export const getMovieById = async (id) => {
         return data;
     } catch (err) {
         console.log(err);
-        return err;
+        throw err;
     }
 }
 
@@ -49,12 +53,12 @@ export const getStreamingById =  async (id) => {
         return data;
     } catch (err) {
         console.error(err);
-        return err;
+        throw err;
     }
 }
 
 export const combineMovieData = (movieData, streamingData) => {
-    if (movieData["Error"] || streamingData["message"]) return { error: true, message: movieData["Error"] || streamingData["message"] };
+    if (movieData["Error"]) throw Error(movieData["message"]);
     return { 
         details: movieData || {}, 
         streamingInfo: streamingData["result"] 
@@ -89,35 +93,20 @@ export const imageUrlToBuffer =  async (url) => {
         return imageBuffer;
     } catch (err) {
         console.log(err);
-        return err;
+        throw err;
     }
-}
-
-export const readFromFile = (path) => {
-    readFile(path, (err, data) => {
-        if (err) {
-            console.log(err);
-            return { error: true, message: err["message"] }
-        };
-
-        return data; 
-    });
 }
 
 export const writeToFile = (path, data) => {
-    if (existsSync(path)) {
-        return { error: true, message: "This data file already exists!" };
-    } else {
-        // Write the data to the filesystem
-        writeFile(path, data, (err) => {
-            if (err) {
-                console.log(err)
-                return { error: true, message: err["message"] };
-            }
-            
-            return readFromFile(path);
-        });
-    }
+    // Write the data to the filesystem
+    writeFileSync(path, data, (err) => {
+        if (err) {
+            console.log(err)
+            throw err;
+        }
+        
+        console.log("Data written successfully to file path.");
+    });
 }
 
 

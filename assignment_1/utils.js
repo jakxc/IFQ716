@@ -15,10 +15,12 @@ export const getMovieByTitle = async (title, currentPage = 1) => {
         const data = await res.json();
         console.log(data);
         currentPage = parseInt(currentPage);
-        return { 
+        return data["totalResults"] 
+        ? { 
             ...data, 
-            prevPage: !data["totalResults"] || currentPage <= 1 ? "N/A" : currentPage - 1, 
-            nextPage: !data["totalResults"] || currentPage >= Math.ceil(parseInt(data["totalResults"]) / 10) ? "N/A" : currentPage + 1 };
+            prev: currentPage <= 1 ? "N/A" : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage - 1}`, 
+            next: currentPage >= Math.ceil(parseInt(data["totalResults"]) / 10) ? "N/A" : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage + 1}` }
+        : data;
     } catch (err) {
         console.log(err);
         throw err;

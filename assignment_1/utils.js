@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import { writeFileSync, existsSync } from 'fs';
+import { writeFileSync } from 'fs';
 
 dotenv.config();
 
@@ -79,8 +79,7 @@ export const getMovieId = (movie) => {
 
 export const getMoviePoster = (movie) => {
     if (!movie["Poster"]) {
-        console.log("No movie poster found.")
-        return null;
+        throw Error("No movie poster found.")
     } 
     
     return movie["Poster"] ;

@@ -85,7 +85,7 @@ export const getMoviePoster = (movie) => {
     return movie["Poster"] ;
 }
 
-export const imageUrlToBuffer =  async (url) => {
+export const convertUrlToBuffer =  async (url) => {
     try {
         const res = await fetch(url);
         const blob = await res.blob();

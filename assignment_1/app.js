@@ -1,13 +1,13 @@
 import * as http from "http";
-import { readFile, existsSync } from "fs";
+import { readFile, writeFileSync, existsSync } from "fs";
+import { fileTypeFromBuffer } from "file-type";
 import { 
     getMovieById, 
     getMovieByTitle, 
     getStreamingById, 
     combineMovieData,
     getMoviePoster,
-    imageUrlToBuffer,
-    writeToFile
+    convertUrlToBuffer,
  } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
@@ -16,11 +16,11 @@ const routing =  async (req, res) => {
     const url = req.url;
     const method = req.method;
 
-    if ((url.match(/\/movies\/search\/([a-zA-Z0-9])/) || url.startsWith("/movies/search/")) && method === 'GET') {
+    if ((url.match(/\/movies\/search\?([a-zA-Z0-9])/) || url.startsWith("/movies/search")) && method === 'GET') {
         try {
             // get title from params
-            const params = new URLSearchParams(req.url.split("/")[3]);
-            const title = params.toString().split("=&").length > 1 ? params.toString().split("=&")[0] : params.toString().split("=")[0];
+            const params = new URLSearchParams(req.url.split("?")[1]);
+            const title = params.get("title")
             // get page from url
             const page = params.get("page") || 1;
             // get movie
@@ -47,11 +47,11 @@ const routing =  async (req, res) => {
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
-    } else if ((url.match(/\/movies\/data\/([a-zA-Z0-9])/) || url.startsWith("/movies/data/")) && method === 'GET') {
+    } else if ((url.match(/\/movies\/data\?([a-zA-Z0-9])/) || url.startsWith("/movies/data")) && method === 'GET') {
         try {
             // get id from url
-            const params = new URLSearchParams(req.url.split("/")[3]);
-            const id = params.toString().split("=&").length > 1 ? params.toString().split("=&")[0] :params.toString().split("=")[0];
+            const params = new URLSearchParams(req.url.split("?")[1]);
+            const id = params.get("id");
             const movie = await getMovieById(id);
             const streaming = await getStreamingById(id);
             const combinedData = combineMovieData(movie, streaming);
@@ -79,9 +79,14 @@ const routing =  async (req, res) => {
         }
     } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method === 'GET') {       
         try {
-            // get id from url
             const id = req.url.split("/")[2];
+            const movie = await getMovieById(id);
+            const posterUrl = getMoviePoster(movie);
+            const buffer = await convertUrlToBuffer(posterUrl);   
             const filePath = `./posters/${id}.png`;
+            const fileType = await fileTypeFromBuffer(buffer);
+            console.log(fileType)
+            const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
 
             res.setHeader( "Access-Control-Allow-Origin", "*");
             switch (true) {
@@ -91,38 +96,45 @@ const routing =  async (req, res) => {
                     res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
                     res.end();
                     break;
-                default:
-                    if (existsSync(filePath)) {
-                        readFile(filePath, "binary", (err, data) => {
-                            if (err) {
-                                console.log(err);
-                                throw err;
-                            };
-    
-                            res.statusCode = 200;
-                            res.setHeader("Content-Type", "image/png");
-                            res.write(data, "binary");
-                            res.end();
-                        });
-                    } else {
-                        // get movie
-                        const movie = await getMovieById(id);
-                        //get poster
-                        const posterUrl = getMoviePoster(movie);
-                        const imageBuffer = await imageUrlToBuffer(posterUrl);   
-        
-                        writeToFile(filePath, imageBuffer);
-                        readFile(filePath, "binary", (err, data) => {
-                            if (err) {
-                                throw err;
-                            };
+                case (!imgExtRegex.test(fileType["ext"])):
+                    res.statusCode = 400;
+                    res.setHeader("Content-Type", "application/json");
+                    res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
+                    res.end();
+                    break;
+                case (existsSync(filePath)): 
+                    readFile(filePath, "binary", (err, data) => {
+                        if (err) {
+                            console.log(err);
+                            throw err;
+                        };
 
-                            res.statusCode = 200;
-                            res.setHeader("Content-Type", "image/png");
-                            res.write(data, "binary");
-                            res.end();
-                        });
-                    }
+                        res.statusCode = 200;
+                        res.setHeader("Content-Type", "image/png");
+                        res.write(data, "binary");
+                        res.end();
+                    });
+                    break;
+                default:
+                    writeFileSync(filePath, buffer, (err) => {
+                        if (err) {
+                            console.log(err)
+                            throw err;
+                        }
+                        
+                        console.log("Data written successfully to file path.");
+                    });
+
+                    readFile(filePath, "binary", (err, data) => {
+                        if (err) {
+                            throw err;
+                        };
+
+                        res.statusCode = 200;
+                        res.setHeader("Content-Type", "image/png");
+                        res.write(data, "binary");
+                        res.end();
+                    });
                     break;
             }
         } catch (err) {
@@ -130,7 +142,7 @@ const routing =  async (req, res) => {
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
-    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
+    } else if ((url.match(/\/posters\/add\?([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
         // set the status code and content-type
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Content-Type", "application/json");
@@ -139,18 +151,52 @@ const routing =  async (req, res) => {
         req.on("data", (chunk) => {
             body.push(chunk);
         });
-        req.on("end", () => {
+        req.on("end", async () => {
             const id = req.url.split("/")[3];
-            const data = Buffer.concat(body);
+            const buffer = Buffer.concat(body);
+            const filePath = `./posters/${id}.png`;
+            const fileType = await fileTypeFromBuffer(buffer);
+            const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
 
             try {
-                const response = writeToFile(`./posters/${id}.png`, data);
-                res.statusCode = 200;
-                res.write(JSON.stringify({
-                    "error": false,
-                    "message": "Poster Uploaded Successfully"
-                }));
-                res.end();  
+                switch (true) {
+                    case (!id || id.length === 0):
+                        res.statusCode = 400;
+                        res.setHeader("Content-Type", "application/json");
+                        res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
+                        res.end();
+                        break;
+                    case (!imgExtRegex.test(fileType["ext"])):
+                        res.statusCode = 400;
+                        res.setHeader("Content-Type", "application/json");
+                        res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
+                        res.end();
+                        break;
+                    case (existsSync(filePath)):
+                        res.statusCode = 400;
+                        res.write(JSON.stringify({
+                            "error": true,
+                            "message": "Poster for this movie already exists!"
+                        }));
+                        res.end();  
+                        break;
+                    default: 
+                        writeFileSync(filePath, buffer, (err) => {
+                            if (err) {
+                                console.log(err)
+                                throw err;
+                            }
+                            
+                            console.log("Data written successfully to file path.");         
+                        });
+                        res.statusCode = 200;
+                        res.write(JSON.stringify({
+                            "error": false,
+                            "message": "Poster Uploaded Successfully!"
+                        }));
+                        res.end();  
+                        break;
+                }
             } catch (err) {
                 res.statusCode = 500;
                 res.end(JSON.stringify({ error: true, message: err["message"] }));

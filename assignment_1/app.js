@@ -17,6 +17,9 @@ const routing =  async (req, res) => {
     const method = req.method;
 
     if ((url.match(/\/movies\/search\?([a-zA-Z0-9])/) || url.startsWith("/movies/search")) && method === 'GET') {
+        
+        res.setHeader("Access-Control-Allow-Origin", "*");     
+        res.setHeader("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
         try {
             // get title from params
             const params = new URLSearchParams(req.url.split("?")[1]);
@@ -56,7 +59,6 @@ const routing =  async (req, res) => {
             const streaming = await getStreamingById(id);
             const combinedData = combineMovieData(movie, streaming);
 
-            res.setHeader( "Access-Control-Allow-Origin", "*");
             switch (true) {
                 case (!id || id.length === 0):
                     res.statusCode = 400;

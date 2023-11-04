@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Buffer } from 'buffer';
 import './App.css';
 
 function App() {
@@ -37,7 +38,7 @@ function App() {
         apiUrl = `http://localhost:3000/movies/search?title=${formData.title}&page=${formData.page}`;
         break;
       case (endpoint.startsWith("/movies/data")):
-        apiUrl = `http://localhost:3000/movies/search?id=${formData.id}`;
+        apiUrl = `http://localhost:3000/movies/data?id=${formData.id}`;
         break;
       case (endpoint.startsWith("/posters")):
         apiUrl = `http://localhost:3000/posters/${formData.id}`;
@@ -54,16 +55,15 @@ function App() {
 
     if (method === "GET") {
       console.log(apiUrl);
-      fetch(apiUrl, {
-        method: "GET", // *GET, POST, PUT, DELETE, etc.
-        headers: {
-          "Content-Type": contentType,
-       }
-      })
-      .then(res => res.json())
+      fetch(apiUrl)
+      .then(res => endpoint.startsWith("/posters") ? res.arrayBuffer() : res.json())
       .then(data => {
         console.log("data: " + data);
-        setContent(data);
+        if (endpoint.startsWith("/posters")) {
+          setContent(Buffer.from(data, 'binary').toString('base64'));
+        } else {
+          setContent(JSON.stringify(data));
+        }
       })
     } else if (method === "POST") {
       fetch(apiUrl, {
@@ -89,7 +89,7 @@ function App() {
             <option value="/movies/search/:title">/movies/search/:title</option>
             <option value="/movies/data/:id">/movies/data/:id</option>
             <option value="/posters/:id">/posters/:id</option>
-            <option value="/posters/add/:id">/posters/:id</option>
+            <option value="/posters/add/:id">/posters/add/:id</option>
           </select>
         </div>
         <div>
@@ -130,7 +130,7 @@ function App() {
         </div>
         <button onClick={makeAPICall}>Submit</button>
       </form>
-      <div>{content}</div>
+      <div>{formData.endpoint.startsWith("/posters") ? <img src={`data:image/png;base64,${content}`}/> : content }</div>
     </div>
   );
 }

@@ -22,6 +22,7 @@ const data = [
     "Tonkinese",
     "Savannah",
     "Himalayan",
+    "Egyptian Mau"
 ];
 
 function routing(req, res) {

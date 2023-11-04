@@ -16,10 +16,9 @@ const routing =  async (req, res) => {
     const url = req.url;
     const method = req.method;
 
-    if ((url.match(/\/movies\/search\?([a-zA-Z0-9])/) || url.startsWith("/movies/search")) && method === 'GET') {
-        
-        res.setHeader("Access-Control-Allow-Origin", "*");     
-        res.setHeader("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+    if ((url.match(/\/movies\/search\?([a-zA-Z0-9])/) || url.startsWith("/movies/search")) && method === 'GET') { 
+        res.setHeader("Access-Control-Allow-Origin", "*");   
+       
         try {
             // get title from params
             const params = new URLSearchParams(req.url.split("?")[1]);
@@ -29,11 +28,10 @@ const routing =  async (req, res) => {
             // get movie
             const movies = await getMovieByTitle(title, page);
            
-            res.setHeader( "Access-Control-Allow-Origin", "*");
             switch (true) {
                 case (!title || title.length === 0):
                     res.statusCode = 400;
-                    res.setHeader("Content-Type", "application/json");
+                    res.setHeader("Content-Type", "application/json"); 
                     res.write(JSON.stringify({ error: true, message: "You must supply a title!" }));
                     res.end();
                     break;
@@ -51,6 +49,8 @@ const routing =  async (req, res) => {
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
     } else if ((url.match(/\/movies\/data\?([a-zA-Z0-9])/) || url.startsWith("/movies/data")) && method === 'GET') {
+        res.setHeader("Access-Control-Allow-Origin", "*");   
+
         try {
             // get id from url
             const params = new URLSearchParams(req.url.split("?")[1]);
@@ -79,7 +79,9 @@ const routing =  async (req, res) => {
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
-    } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method === 'GET') {       
+    } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method === 'GET') {    
+        res.setHeader("Access-Control-Allow-Origin", "*");   
+
         try {
             const id = req.url.split("/")[2];
             const movie = await getMovieById(id);
@@ -90,7 +92,6 @@ const routing =  async (req, res) => {
             console.log(fileType)
             const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
 
-            res.setHeader( "Access-Control-Allow-Origin", "*");
             switch (true) {
                 case (!id || id.length === 0):
                     res.statusCode = 400;
@@ -145,9 +146,7 @@ const routing =  async (req, res) => {
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
     } else if ((url.match(/\/posters\/add\?([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
-        // set the status code and content-type
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Access-Control-Allow-Origin", "*");   
 
         let body = [];
         req.on("data", (chunk) => {
@@ -170,12 +169,13 @@ const routing =  async (req, res) => {
                         break;
                     case (!imgExtRegex.test(fileType["ext"])):
                         res.statusCode = 400;
-                        res.setHeader("Content-Type", "application/json");
+                        res.setHeader("Content-Type", "application/json");  
                         res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
                         res.end();
                         break;
                     case (existsSync(filePath)):
                         res.statusCode = 400;
+                        res.setHeader("Content-Type", "application/json");
                         res.write(JSON.stringify({
                             "error": true,
                             "message": "Poster for this movie already exists!"
@@ -192,6 +192,7 @@ const routing =  async (req, res) => {
                             console.log("Data written successfully to file path.");         
                         });
                         res.statusCode = 200;
+                        res.setHeader("Content-Type", "application/json");
                         res.write(JSON.stringify({
                             "error": false,
                             "message": "Poster Uploaded Successfully!"
@@ -201,6 +202,7 @@ const routing =  async (req, res) => {
                 }
             } catch (err) {
                 res.statusCode = 500;
+                res.setHeader("Content-Type", "application/json");
                 res.end(JSON.stringify({ error: true, message: err["message"] }));
             }
         })

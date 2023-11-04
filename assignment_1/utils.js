@@ -18,8 +18,8 @@ export const getMovieByTitle = async (title, currentPage = 1) => {
         return data["totalResults"] 
         ? { 
             ...data, 
-            prev: currentPage <= 1 ? "N/A" : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage - 1}`, 
-            next: currentPage >= Math.ceil(parseInt(data["totalResults"]) / 10) ? "N/A" : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage + 1}` }
+            previous: currentPage <= 1 ? null : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage - 1}`, 
+            next: currentPage >= Math.ceil(parseInt(data["totalResults"]) / 10) ? null : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage + 1}` }
         : data;
     } catch (err) {
         console.log(err);

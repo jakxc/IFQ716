@@ -145,8 +145,11 @@ const routing =  async (req, res) => {
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ error: true, message: err["message"] }));
         }
-    } else if ((url.match(/\/posters\/add\?([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
-        res.setHeader("Access-Control-Allow-Origin", "*");   
+    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS']);
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Credentials', true);
 
         let body = [];
         req.on("data", (chunk) => {
@@ -165,6 +168,12 @@ const routing =  async (req, res) => {
                         res.statusCode = 400;
                         res.setHeader("Content-Type", "application/json");
                         res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
+                        res.end();
+                        break;
+                    case (!body || body.length === 0):
+                        res.statusCode = 400;
+                        res.setHeader("Content-Type", "application/json");  
+                        res.write(JSON.stringify({ error: true, message: "You must supply an image file!" }));
                         res.end();
                         break;
                     case (!imgExtRegex.test(fileType["ext"])):

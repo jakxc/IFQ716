@@ -4,13 +4,14 @@ import './App.css';
 
 function App() {
   const [formData, setFormData] = useState({
-    endpoint: "",
+    endpoint: "/movies/search/:title",
     title: "",
     id: "",
     page: 1,
     file: ""
   })
 
+  const [isImage, setIsImage] = useState(false);
   const [content, setContent] = useState("");
 
   const handleChange = (e) => {
@@ -30,22 +31,24 @@ function App() {
     e.preventDefault();
     let apiUrl = "";
     let method = "GET";
-    let contentType = "application/json"
     let endpoint = formData.endpoint;
 
     switch(true) {
-      case (endpoint.startsWith("/movies/search")):
+      case (endpoint === "/movies/search/:title"):
         apiUrl = `http://localhost:3000/movies/search?title=${formData.title}&page=${formData.page}`;
+        setIsImage(false);
         break;
-      case (endpoint.startsWith("/movies/data")):
+      case (endpoint === "/movies/data/:id"):
         apiUrl = `http://localhost:3000/movies/data?id=${formData.id}`;
+        setIsImage(false);
         break;
-      case (endpoint.startsWith("/posters")):
+      case (endpoint === "/posters/:id"):
         apiUrl = `http://localhost:3000/posters/${formData.id}`;
-        contentType = "image/png"
+        setIsImage(true);
         break;
-      case (endpoint.startsWith("/posters/add")):
+      case (endpoint === "/posters/add/:id"):
         apiUrl = `http://localhost:3000/posters/add/${formData.id}`;
+        setIsImage(false);
         method = "POST";
         break;
       default: 
@@ -54,11 +57,9 @@ function App() {
     }
 
     if (method === "GET") {
-      console.log(apiUrl);
       fetch(apiUrl)
-      .then(res => endpoint.startsWith("/posters") ? res.arrayBuffer() : res.json())
+      .then(res => isImage ? res.arrayBuffer() : res.json())
       .then(data => {
-        console.log("data: " + data);
         if (endpoint.startsWith("/posters")) {
           setContent(Buffer.from(data, 'binary').toString('base64'));
         } else {
@@ -69,7 +70,7 @@ function App() {
       fetch(apiUrl, {
         method: "POST", // *GET, POST, PUT, DELETE, etc.
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "image/png",
         },
         body: formData.file,
       })
@@ -82,55 +83,64 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <form onSubmit={makeAPICall}>
-        <div>
-          <select name="endpoint" onChange={handleChange}>
-            <option value="/movies/search/:title">/movies/search/:title</option>
-            <option value="/movies/data/:id">/movies/data/:id</option>
-            <option value="/posters/:id">/posters/:id</option>
-            <option value="/posters/add/:id">/posters/add/:id</option>
-          </select>
-        </div>
-        <div>
-          <label>Movie title</label>
-          <input 
-            type="text"  
-            name="title"
-            value={formData.title} 
-            onChange={handleChange} 
-          />
-        </div>
-        <div>
-          <label>Movie id</label>
-          <input 
-            type="text"  
-            name="id"
-            value={formData.id} 
-            onChange={handleChange} 
-          />
-        </div>
-        <div>
-          <label>Current page</label>
-          <input 
-            type="number"  
-            name="page"
-            value={formData.page} 
-            onChange={handleChange} 
-          />
-        </div>
-        <div>
-          <label>Upload Poster</label>
-          <input 
-            type="file"  
-            name="file"
-            value={formData.file} 
-            onChange={handleChange} 
-          />
-        </div>
-        <button onClick={makeAPICall}>Submit</button>
-      </form>
-      <div>{formData.endpoint.startsWith("/posters") ? <img src={`data:image/png;base64,${content}`}/> : content }</div>
+    <div className="app">
+      <h1>Movie ratings and streaming API</h1>
+      <div className="container">
+        <form className="form" onSubmit={makeAPICall}>
+          <div className="form_row">
+            <div className="form_input">
+              <label>API endpoint</label>
+              <select name="endpoint" onChange={handleChange}>
+                <option value="/movies/search/:title">/movies/search/:title</option>
+                <option value="/movies/data/:id">/movies/data/:id</option>
+                <option value="/posters/:id">/posters/:id</option>
+                <option value="/posters/add/:id">/posters/add/:id</option>
+              </select>
+            </div>
+          </div>
+          <div className="form_row">
+            <div className="form_input">
+              <label>Movie title</label>
+              <input 
+                type="text"  
+                name="title"
+                value={formData.title} 
+                onChange={handleChange} 
+              />
+            </div>
+            <div className="form_input">
+              <label>Movie id</label>
+              <input 
+                type="text"  
+                name="id"
+                value={formData.id} 
+                onChange={handleChange} 
+              />
+            </div>
+          </div>
+          <div className="form_row">
+            <div className="form_input">
+              <label>Current page</label>
+              <input 
+                type="number"  
+                name="page"
+                value={formData.page} 
+                onChange={handleChange} 
+              />
+            </div>
+            <div className="form_input">
+              <label>Upload Poster</label>
+              <input 
+                type="file"  
+                name="file"
+                onChange={handleChange} 
+              />
+            </div>
+          </div>
+          <button className="btn" onClick={makeAPICall}>Submit</button>
+        </form>
+        <div className="content-container">{isImage ? <img src={`data:image/png;base64,${content}`} alt="Poster" /> : content }</div>
+      </div>
     </div>
   );
 }

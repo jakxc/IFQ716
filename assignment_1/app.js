@@ -46,7 +46,7 @@ const routing =  async (req, res) => {
         } catch (err) {
             res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ error: true, message: err["message"] }));
+            res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
         }
     } else if ((url.match(/\/movies\/data\?([a-zA-Z0-9])/) || url.startsWith("/movies/data")) && method === 'GET') {
         res.setHeader("Access-Control-Allow-Origin", "*");   
@@ -55,6 +55,7 @@ const routing =  async (req, res) => {
             // get id from url
             const params = new URLSearchParams(req.url.split("?")[1]);
             const id = params.get("id");
+            const country = params.get("country");
             const movie = await getMovieById(id);
             const streaming = await getStreamingById(id);
             const combinedData = combineMovieData(movie, streaming);
@@ -69,7 +70,10 @@ const routing =  async (req, res) => {
                 default:
                     res.statusCode = 200;
                     res.setHeader("Content-Type", "application/json");
-                    res.write(JSON.stringify(combinedData));
+                    const filteredStreamingData = { 
+                        ...combinedData, 
+                         streamingInfo: country ? { [country]: combinedData["streamingInfo"][country] } : combinedData["streamingInfo"]}
+                    res.write(JSON.stringify(filteredStreamingData));
                     res.end();
                     break;
             }
@@ -77,7 +81,7 @@ const routing =  async (req, res) => {
             // send the error
             res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ error: true, message: err["message"] }));
+            res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
         }
     } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method === 'GET') {    
         res.setHeader("Access-Control-Allow-Origin", "*");   
@@ -147,10 +151,9 @@ const routing =  async (req, res) => {
         }
     } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS']);
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-        res.setHeader('Access-Control-Allow-Credentials', true);
-
+        res.setHeader('Access-Control-Allow-Credentials', true);    
+        
         let body = [];
         req.on("data", (chunk) => {
             body.push(chunk);
@@ -172,6 +175,9 @@ const routing =  async (req, res) => {
                         break;
                     case (!body || body.length === 0):
                         res.statusCode = 400;
+                        res.setHeader('Access-Control-Allow-Origin', '*');
+                        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+                        res.setHeader('Access-Control-Allow-Credentials', true);
                         res.setHeader("Content-Type", "application/json");  
                         res.write(JSON.stringify({ error: true, message: "You must supply an image file!" }));
                         res.end();

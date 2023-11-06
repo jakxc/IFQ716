@@ -92,12 +92,14 @@ input:focus, select:focus{
 }
 
 .content-container {
-  height: 800px;
-  width: 80%;
-  padding: 10px;
+  height: 50rem;
+  width: 80rem;
+  max-width: 100%;
+  padding: 20px;
   border: 5px solid #a0c7e4;
 
   display: flex;
   justify-content: center;
   overflow: auto;
+  text-wrap: wrap;
 }

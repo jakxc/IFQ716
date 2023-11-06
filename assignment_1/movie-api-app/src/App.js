@@ -8,6 +8,7 @@ function App() {
     title: "",
     id: "",
     page: 1,
+    country: "",
     file: ""
   })
 
@@ -39,7 +40,7 @@ function App() {
         setIsImage(false);
         break;
       case (endpoint === "/movies/data/:id"):
-        apiUrl = `http://localhost:3000/movies/data?id=${formData.id}`;
+        apiUrl = `http://localhost:3000/movies/data?id=${formData.id}&country=${formData.country}`;
         setIsImage(false);
         break;
       case (endpoint === "/posters/:id"):
@@ -63,7 +64,7 @@ function App() {
         if (endpoint.startsWith("/posters")) {
           setContent(Buffer.from(data, 'binary').toString('base64'));
         } else {
-          setContent(JSON.stringify(data));
+          setContent(JSON.stringify(data, null, 2));
         }
       })
     } else if (method === "POST") {
@@ -87,16 +88,14 @@ function App() {
       <h1>Movie ratings and streaming API</h1>
       <div className="container">
         <form className="form" onSubmit={makeAPICall}>
-          <div className="form_row">
-            <div className="form_input">
-              <label>API endpoint</label>
-              <select name="endpoint" onChange={handleChange}>
-                <option value="/movies/search/:title">/movies/search/:title</option>
-                <option value="/movies/data/:id">/movies/data/:id</option>
-                <option value="/posters/:id">/posters/:id</option>
-                <option value="/posters/add/:id">/posters/add/:id</option>
-              </select>
-            </div>
+          <div className="form_input">
+            <label>API endpoint</label>
+            <select name="endpoint" onChange={handleChange}>
+              <option value="/movies/search/:title">/movies/search/:title</option>
+              <option value="/movies/data/:id">/movies/data/:id</option>
+              <option value="/posters/:id">/posters/:id</option>
+              <option value="/posters/add/:id">/posters/add/:id</option>
+            </select>
           </div>
           <div className="form_row">
             <div className="form_input">
@@ -109,17 +108,6 @@ function App() {
               />
             </div>
             <div className="form_input">
-              <label>Movie id</label>
-              <input 
-                type="text"  
-                name="id"
-                value={formData.id} 
-                onChange={handleChange} 
-              />
-            </div>
-          </div>
-          <div className="form_row">
-            <div className="form_input">
               <label>Current page</label>
               <input 
                 type="number"  
@@ -128,18 +116,37 @@ function App() {
                 onChange={handleChange} 
               />
             </div>
+          </div>
+          <div className="form_row">
             <div className="form_input">
+                <label>Movie id</label>
+                <input 
+                  type="text"  
+                  name="id"
+                  value={formData.id} 
+                  onChange={handleChange} 
+                />
+            </div>
+            <div className="form_input">
+              <label>Country</label>
+              <input 
+                type="text"  
+                name="country"
+                onChange={handleChange} 
+              />
+            </div>
+          </div>
+          <div className="form_input">
               <label>Upload Poster</label>
               <input 
                 type="file"  
                 name="file"
                 onChange={handleChange} 
               />
-            </div>
           </div>
           <button className="btn" onClick={makeAPICall}>Submit</button>
         </form>
-        <div className="content-container">{isImage ? <img src={`data:image/png;base64,${content}`} alt="Poster" /> : content }</div>
+        <pre className="content-container">{isImage ? <img src={`data:image/png;base64,${content}`} alt="Poster" /> : content }</pre>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ export const getMovieByTitle = async (title, currentPage = 1) => {
         : data;
     } catch (err) {
         console.log(err);
-        throw err;
+        throw Error(err["message"]);
     }
 }
 

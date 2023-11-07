@@ -14,6 +14,7 @@ export const getMovieByTitle = async (title, currentPage = 1) => {
         const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&s=${title}&page=${currentPage}`);
         const data = await res.json();
         console.log(data);
+        // if (data["Error"]) throw Error(data["Error"])
         currentPage = parseInt(currentPage);
         return data["totalResults"] 
         ? { 
@@ -23,7 +24,7 @@ export const getMovieByTitle = async (title, currentPage = 1) => {
         : data;
     } catch (err) {
         console.log(err);
-        throw Error(err["message"]);
+        throw err;
     }
 }
 
@@ -51,7 +52,6 @@ export const getStreamingById =  async (id) => {
     try {
         const res = await fetch(url, options);
         const data = await res.json();
-        console.log(data);
         return data;
     } catch (err) {
         console.error(err);
@@ -60,12 +60,22 @@ export const getStreamingById =  async (id) => {
 }
 
 export const combineMovieData = (movieData, streamingData) => {
-    if (movieData["Error"]) throw Error(movieData["message"]);
-    return { 
-        details: movieData || {}, 
-        streamingInfo: streamingData["result"] 
-        ? streamingData["result"]["streamingInfo"] ? streamingData["result"]["streamingInfo"] : {} 
-        : {} };
+    // if (movieData["Error"]) throw Error(movieData["Error"]);
+    // if (streamingData["message"] ) throw Error(streamingData["message"]);
+    try {
+        const combinedObj = { 
+            details: movieData || {}, 
+            streamingInfo: streamingData["result"] 
+            ? streamingData["result"]["streamingInfo"] 
+            ? streamingData["result"]["streamingInfo"] : {} 
+            : {} 
+        };
+
+        return combinedObj;
+    } catch (err) {
+        console.log(err);
+        throw err;
+    }
 }
 
 export const getMovieId = (movie) => {

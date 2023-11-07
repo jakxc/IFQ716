@@ -147,7 +147,7 @@ const routing =  async (req, res) => {
         } catch (err) {
             res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ error: true, message: err["message"] }));
+            res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
         }
     } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -218,7 +218,7 @@ const routing =  async (req, res) => {
             } catch (err) {
                 res.statusCode = 500;
                 res.setHeader("Content-Type", "application/json");
-                res.end(JSON.stringify({ error: true, message: err["message"] }));
+                res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
             }
         })
     } else {

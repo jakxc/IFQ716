@@ -89,7 +89,7 @@ export const getMovieId = (movie) => {
 
 export const getMoviePoster = (movie) => {
     if (!movie["Poster"]) {
-        throw Error("No movie poster found.")
+        return null;
     } 
     
     return movie["Poster"] ;

@@ -35,6 +35,18 @@ const routing =  async (req, res) => {
                     res.write(JSON.stringify({ error: true, message: "You must supply a title!" }));
                     res.end();
                     break;
+                case (!parseInt(page) ): 
+                    res.statusCode = 400;
+                    res.setHeader("Content-Type", "application/json"); 
+                    res.write(JSON.stringify({ error: true, message: "You must supply a valid page number!" }));
+                    res.end();
+                    break;
+                case (!movies["totalResults"]):
+                    res.statusCode = 404;
+                    res.setHeader("Content-Type", "application/json"); 
+                    res.write(JSON.stringify({ message: `${movies["Error"]}` }));
+                    res.end();
+                    break;
                 default:
                     res.statusCode = 200;
                     res.setHeader("Content-Type", "application/json");
@@ -67,6 +79,12 @@ const routing =  async (req, res) => {
                     res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
                     res.end();
                     break;
+                case (movie["Response"] === "False"):
+                    res.statusCode = 404;
+                    res.setHeader("Content-Type", "application/json"); 
+                    res.write(JSON.stringify({ message: movie["Error"] }));
+                    res.end();
+                    break;
                 default:
                     res.statusCode = 200;
                     res.setHeader("Content-Type", "application/json");
@@ -90,11 +108,7 @@ const routing =  async (req, res) => {
             const id = req.url.split("/")[2];
             const movie = await getMovieById(id);
             const posterUrl = getMoviePoster(movie);
-            const buffer = await convertUrlToBuffer(posterUrl);   
             const filePath = `./posters/${id}.png`;
-            const fileType = await fileTypeFromBuffer(buffer);
-            console.log(fileType)
-            const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
 
             switch (true) {
                 case (!id || id.length === 0):
@@ -103,10 +117,16 @@ const routing =  async (req, res) => {
                     res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
                     res.end();
                     break;
-                case (!imgExtRegex.test(fileType["ext"])):
-                    res.statusCode = 400;
+                case (movie["Response"] === "False"):
+                    res.statusCode = 404;
+                    res.setHeader("Content-Type", "application/json"); 
+                    res.write(JSON.stringify({ message: movie["Error"] }));
+                    res.end();
+                    break;
+                case (!existsSync(filePath) && !posterUrl):
+                    res.statusCode = 404;
                     res.setHeader("Content-Type", "application/json");
-                    res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
+                    res.write(JSON.stringify({ message: "Poster not found!" }));
                     res.end();
                     break;
                 case (existsSync(filePath)): 
@@ -123,25 +143,43 @@ const routing =  async (req, res) => {
                     });
                     break;
                 default:
-                    writeFileSync(filePath, buffer, (err) => {
-                        if (err) {
-                            console.log(err)
-                            throw err;
-                        }
-                        
-                        console.log("Data written successfully to file path.");
-                    });
-
-                    readFile(filePath, "binary", (err, data) => {
-                        if (err) {
-                            throw err;
-                        };
-
-                        res.statusCode = 200;
-                        res.setHeader("Content-Type", "image/png");
-                        res.write(data, "binary");
+                    if (!posterUrl) {
+                        res.statusCode = 404;
+                        res.setHeader("Content-Type", "application/json");
+                        res.write(JSON.stringify({ message: "Poster not found!" }));
                         res.end();
-                    });
+                    } else {
+                        const buffer = await convertUrlToBuffer(posterUrl);   
+                        const fileType = await fileTypeFromBuffer(buffer);
+                        const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
+
+                        if (!imgExtRegex.test(fileType["ext"])) {
+                            res.statusCode = 400;
+                            res.setHeader("Content-Type", "application/json");
+                            res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
+                            res.end();
+                        } else {
+                            writeFileSync(filePath, buffer, (err) => {
+                                if (err) {
+                                    console.log(err)
+                                    throw err;
+                                }
+                                
+                                console.log("Data written successfully to file path.");
+                            });
+
+                            readFile(filePath, "binary", (err, data) => {
+                                if (err) {
+                                    throw err;
+                                };
+
+                                res.statusCode = 200;
+                                res.setHeader("Content-Type", "image/png");
+                                res.write(data, "binary");
+                                res.end();
+                            });
+                        }
+                    }
                     break;
             }
         } catch (err) {
@@ -152,7 +190,8 @@ const routing =  async (req, res) => {
     } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-        res.setHeader('Access-Control-Allow-Credentials', true);    
+        res.setHeader('Access-Control-Allow-Credentials', true);
+        // res.setHeader("Content-Type", "application/json");  
         
         let body = [];
         req.on("data", (chunk) => {
@@ -160,6 +199,7 @@ const routing =  async (req, res) => {
         });
         req.on("end", async () => {
             const id = req.url.split("/")[3];
+            const movie = await getMovieById(id);
             const buffer = Buffer.concat(body);
             const filePath = `./posters/${id}.png`;
             const fileType = await fileTypeFromBuffer(buffer);
@@ -173,12 +213,14 @@ const routing =  async (req, res) => {
                         res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
                         res.end();
                         break;
+                    case (movie["Response"] === "False"):
+                        res.statusCode = 404;
+                        res.setHeader("Content-Type", "application/json"); 
+                        res.write(JSON.stringify({ message: movie["Error"] }));
+                        res.end();
+                        break;
                     case (!body || body.length === 0):
                         res.statusCode = 400;
-                        res.setHeader('Access-Control-Allow-Origin', '*');
-                        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-                        res.setHeader('Access-Control-Allow-Credentials', true);
-                        res.setHeader("Content-Type", "application/json");  
                         res.write(JSON.stringify({ error: true, message: "You must supply an image file!" }));
                         res.end();
                         break;
@@ -206,7 +248,7 @@ const routing =  async (req, res) => {
                             
                             console.log("Data written successfully to file path.");         
                         });
-                        res.statusCode = 200;
+                        res.statusCode = 201;
                         res.setHeader("Content-Type", "application/json");
                         res.write(JSON.stringify({
                             "error": false,

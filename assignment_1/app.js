@@ -170,79 +170,87 @@ const routing =  async (req, res) => {
             res.writeHead(500);
             res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
         }
-    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method.toLowerCase() === "post") {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Credentials', true);
-        res.setHeader("Content-Type", "application/json");
+    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add"))) {
+        if (method.toLowerCase() == "options") {
+            res.writeHead(200, {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Headers": "Content-Type",
+              "Access-Control-Allow-Methods": "OPTIONS, DELETE",
+            });
+            res.end();
+        }
 
-        let body = [];
-        req.on("data", (chunk) => {
-            body.push(chunk);
-        });
-        req.on("end", async () => {
-            const id = req.url.split("/")[3];
-            const movie = await getMovieById(id);
-            const buffer = Buffer.concat(body);
-            const filePath = `./posters/${id}.png`;
-            const fileType = await fileTypeFromBuffer(buffer);
-            const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
+        if (method.toLowerCase() === "post") {
+            res.setHeader("Access-Control-Allow-Origin", "*");   
+            
+            let body = [];
+            req.on("data", (chunk) => {
+                body.push(chunk);
+            });
+            req.on("end", async () => {
+                const id = req.url.split("/")[3];
+                const movie = await getMovieById(id);
+                const buffer = Buffer.concat(body);
+                const filePath = `./posters/${id}.png`;
+                const fileType = await fileTypeFromBuffer(buffer);
+                const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
 
-            try {
-                switch (true) {
-                    case (!id || id.length === 0):
-                        res.writeHead(400);
-                        res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
-                        res.end();
-                        break;
-                    case (movie["Response"] === "False"):
-                        res.writeHead(404);
-                        res.write(JSON.stringify({ message: movie["Error"] }));
-                        res.end();
-                        break;
-                    case (!body || body.length === 0):
-                        res.writeHead(400);
-                        res.write(JSON.stringify({ error: true, message: "You must supply an image file!" }));
-                        res.end();
-                        break;
-                    case (!imgExtRegex.test(fileType["ext"])):
-                        res.writeHead(400);
-                        res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
-                        res.end();
-                        break;
-                    case (existsSync(filePath)):
-                        res.writeHead(400);
-                        res.write(JSON.stringify({
-                            "error": true,
-                            "message": "Poster for this movie already exists!"
-                        }));
-                        res.end();  
-                        break;
-                    default: 
-                        writeFileSync(filePath, buffer, (err) => {
-                            if (err) {
-                                console.log(err)
-                                throw err;
-                            }
-                            
-                            console.log("Data written successfully to file path.");         
-                        });
+                try {
+                    switch (true) {
+                        case (!id || id.length === 0):
+                            res.writeHead(400);
+                            res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
+                            res.end();
+                            break;
+                        case (movie["Response"] === "False"):
+                            res.writeHead(404);
+                            res.write(JSON.stringify({ message: movie["Error"] }));
+                            res.end();
+                            break;
+                        case (!body || body.length === 0):
+                            res.writeHead(400);
+                            res.write(JSON.stringify({ error: true, message: "You must supply an image file!" }));
+                            res.end();
+                            break;
+                        case (!imgExtRegex.test(fileType["ext"])):
+                            res.writeHead(400);
+                            res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
+                            res.end();
+                            break;
+                        case (existsSync(filePath)):
+                            res.writeHead(400);
+                            res.write(JSON.stringify({
+                                "error": true,
+                                "message": "Poster for this movie already exists!"
+                            }));
+                            res.end();  
+                            break;
+                        default: 
+                            writeFileSync(filePath, buffer, (err) => {
+                                if (err) {
+                                    console.log(err)
+                                    throw err;
+                                }
+                                
+                                console.log("Data written successfully to file path.");         
+                            });
 
-                        res.writeHead(201);
-                        res.write(JSON.stringify({
-                            "error": false,
-                            "message": "Poster Uploaded Successfully!"
-                        }));
-                        res.end();  
-                        break;
+                            res.writeHead(201);
+                            res.write(JSON.stringify({
+                                "error": false,
+                                "message": "Poster Uploaded Successfully!"
+                            }));
+                            res.end();  
+                            break;
+                    }
+                } catch (err) {
+                    res.writeHead(500);
+                    res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
                 }
-            } catch (err) {
-                res.writeHead(500);
-                res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
-            }
-        })
+            })
+        }
     } else {
         // No page matched the url
-        res.writeHead(404);
         res.write("No matching page");
         res.end();
     }

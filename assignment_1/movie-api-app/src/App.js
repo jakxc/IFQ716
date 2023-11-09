@@ -64,7 +64,7 @@ function App() {
       fetch(apiUrl)
       .then(res => isImage ? res.arrayBuffer() : res.json())
       .then(data => {
-        if (endpoint.startsWith("/posters")) {
+        if (isImage) {
           setContent(Buffer.from(data, 'binary').toString('base64'));
         } else {
           setContent(JSON.stringify(data, null, 2));
@@ -82,7 +82,7 @@ function App() {
       .then(res => res.json())
       .then(data => {
         console.log(data);
-        setContent(data);
+        setContent(JSON.stringify(data));
       })
       .finally(() => setLoading(false));
     }

@@ -14,6 +14,7 @@ function App() {
 
   const [isImage, setIsImage] = useState(false);
   const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     e.preventDefault();
@@ -54,9 +55,11 @@ function App() {
         break;
       default: 
         console.log("Endpoint is not applicable");
+        setIsImage(false);
         break;
     }
 
+    setLoading(true);
     if (method === "GET") {
       fetch(apiUrl)
       .then(res => isImage ? res.arrayBuffer() : res.json())
@@ -67,6 +70,7 @@ function App() {
           setContent(JSON.stringify(data, null, 2));
         }
       })
+      .finally(() => setLoading(false));
     } else if (method === "POST") {
       fetch(apiUrl, {
         method: "POST", // *GET, POST, PUT, DELETE, etc.
@@ -79,7 +83,8 @@ function App() {
       .then(data => {
         console.log(data);
         setContent(data);
-      });
+      })
+      .finally(() => setLoading(false));
     }
   }
 
@@ -146,7 +151,7 @@ function App() {
           </div>
           <button className="btn" onClick={makeAPICall}>Submit</button>
         </form>
-        <pre className="content-container">{isImage ? <img src={`data:image/png;base64,${content}`} alt="Poster" /> : content }</pre>
+        <pre className="content-container">{loading ? <>Loading...</> : isImage ? <img src={`data:image/png;base64,${content}`} alt="Poster" /> : <>{content}</> }</pre>
       </div>
     </div>
   );

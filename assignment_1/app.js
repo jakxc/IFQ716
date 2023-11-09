@@ -16,52 +16,46 @@ const routing =  async (req, res) => {
     const url = req.url;
     const method = req.method;
 
-    if ((url.match(/\/movies\/search\?([a-zA-Z0-9])/) || url.startsWith("/movies/search")) && method === 'GET') { 
+    if ((url.match(/\/movies\/search\?([a-zA-Z0-9])/) || url.startsWith("/movies/search")) && method.toLowerCase() === "get") { 
         res.setHeader("Access-Control-Allow-Origin", "*");   
+        res.setHeader("Content-Type", "application/json"); 
        
         try {
-            // get title from params
             const params = new URLSearchParams(req.url.split("?")[1]);
             const title = params.get("title")
-            // get page from url
             const page = params.get("page") || 1;
-            // get movie
             const movies = await getMovieByTitle(title, page);
            
             switch (true) {
                 case (!title || title.length === 0):
-                    res.statusCode = 400;
-                    res.setHeader("Content-Type", "application/json"); 
+                    res.writeHead(400);
                     res.write(JSON.stringify({ error: true, message: "You must supply a title!" }));
                     res.end();
                     break;
                 case (!parseInt(page) ): 
-                    res.statusCode = 400;
-                    res.setHeader("Content-Type", "application/json"); 
+                    res.writeHead(400);
                     res.write(JSON.stringify({ error: true, message: "You must supply a valid page number!" }));
                     res.end();
                     break;
                 case (!movies["totalResults"]):
-                    res.statusCode = 404;
-                    res.setHeader("Content-Type", "application/json"); 
+                    res.writeHead(404);
                     res.write(JSON.stringify({ message: `${movies["Error"]}` }));
                     res.end();
                     break;
                 default:
-                    res.statusCode = 200;
-                    res.setHeader("Content-Type", "application/json");
+                    res.writeHead(200);
                     res.write(JSON.stringify(movies));
                     res.end();
                     break;
             }
 
         } catch (err) {
-            res.statusCode = 500;
-            res.setHeader("Content-Type", "application/json");
+            res.writeHead(500);
             res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
         }
-    } else if ((url.match(/\/movies\/data\?([a-zA-Z0-9])/) || url.startsWith("/movies/data")) && method === 'GET') {
+    } else if ((url.match(/\/movies\/data\?([a-zA-Z0-9])/) || url.startsWith("/movies/data")) && method.toLowerCase() === "get") {
         res.setHeader("Access-Control-Allow-Origin", "*");   
+        res.setHeader("Content-Type", "application/json");
 
         try {
             // get id from url
@@ -74,34 +68,30 @@ const routing =  async (req, res) => {
 
             switch (true) {
                 case (!id || id.length === 0):
-                    res.statusCode = 400;
-                    res.setHeader("Content-Type", "application/json");
+                    res.writeHead(400);
                     res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
                     res.end();
                     break;
                 case (movie["Response"] === "False"):
-                    res.statusCode = 404;
-                    res.setHeader("Content-Type", "application/json"); 
+                    res.writeHead(404);
                     res.write(JSON.stringify({ message: movie["Error"] }));
                     res.end();
                     break;
                 default:
-                    res.statusCode = 200;
-                    res.setHeader("Content-Type", "application/json");
                     const filteredStreamingData = { 
                         ...combinedData, 
                          streamingInfo: country ? { [country]: combinedData["streamingInfo"][country] } : combinedData["streamingInfo"]}
+                    res.writeHead(200);
                     res.write(JSON.stringify(filteredStreamingData));
                     res.end();
                     break;
             }
         } catch (err) {
             // send the error
-            res.statusCode = 500;
-            res.setHeader("Content-Type", "application/json");
+            res.writeHead(500);
             res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
         }
-    } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method === 'GET') {    
+    } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method.toLowerCase() === "get") {    
         res.setHeader("Access-Control-Allow-Origin", "*");   
 
         try {
@@ -112,20 +102,20 @@ const routing =  async (req, res) => {
 
             switch (true) {
                 case (!id || id.length === 0):
-                    res.statusCode = 400;
                     res.setHeader("Content-Type", "application/json");
+                    res.writeHead(400);
                     res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
                     res.end();
                     break;
                 case (movie["Response"] === "False"):
-                    res.statusCode = 404;
                     res.setHeader("Content-Type", "application/json"); 
+                    res.writeHead(404);
                     res.write(JSON.stringify({ message: movie["Error"] }));
                     res.end();
                     break;
                 case (!existsSync(filePath) && !posterUrl):
-                    res.statusCode = 404;
                     res.setHeader("Content-Type", "application/json");
+                    res.writeHead(404);
                     res.write(JSON.stringify({ message: "Poster not found!" }));
                     res.end();
                     break;
@@ -136,63 +126,55 @@ const routing =  async (req, res) => {
                             throw err;
                         };
 
-                        res.statusCode = 200;
                         res.setHeader("Content-Type", "image/png");
+                        res.writeHead(200);
                         res.write(data, "binary");
                         res.end();
                     });
                     break;
                 default:
-                    if (!posterUrl) {
-                        res.statusCode = 404;
+                    const buffer = await convertUrlToBuffer(posterUrl);   
+                    const fileType = await fileTypeFromBuffer(buffer);
+                    const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
+
+                    if (!imgExtRegex.test(fileType["ext"])) {
                         res.setHeader("Content-Type", "application/json");
-                        res.write(JSON.stringify({ message: "Poster not found!" }));
+                        res.writeHead(400);
+                        res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
                         res.end();
                     } else {
-                        const buffer = await convertUrlToBuffer(posterUrl);   
-                        const fileType = await fileTypeFromBuffer(buffer);
-                        const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
+                        writeFileSync(filePath, buffer, (err) => {
+                            if (err) {
+                                console.log(err)
+                                throw err;
+                            }
+                            
+                            console.log("Data written successfully to file path.");
+                        });
 
-                        if (!imgExtRegex.test(fileType["ext"])) {
-                            res.statusCode = 400;
-                            res.setHeader("Content-Type", "application/json");
-                            res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
+                        readFile(filePath, "binary", (err, data) => {
+                            if (err) {
+                                throw err;
+                            };
+
+                            res.setHeader("Content-Type", "image/png");
+                            res.writeHead(200);
+                            res.write(data, "binary");
                             res.end();
-                        } else {
-                            writeFileSync(filePath, buffer, (err) => {
-                                if (err) {
-                                    console.log(err)
-                                    throw err;
-                                }
-                                
-                                console.log("Data written successfully to file path.");
-                            });
-
-                            readFile(filePath, "binary", (err, data) => {
-                                if (err) {
-                                    throw err;
-                                };
-
-                                res.statusCode = 200;
-                                res.setHeader("Content-Type", "image/png");
-                                res.write(data, "binary");
-                                res.end();
-                            });
-                        }
+                        });
                     }
                     break;
             }
         } catch (err) {
-            res.statusCode = 500;
             res.setHeader("Content-Type", "application/json");
+            res.writeHead(500);
             res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
         }
-    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method === "POST") {
+    } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add")) && method.toLowerCase() === "post") {
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         res.setHeader('Access-Control-Allow-Credentials', true);
-        // res.setHeader("Content-Type", "application/json");  
-        
+        res.setHeader("Content-Type", "application/json");
+
         let body = [];
         req.on("data", (chunk) => {
             body.push(chunk);
@@ -208,31 +190,27 @@ const routing =  async (req, res) => {
             try {
                 switch (true) {
                     case (!id || id.length === 0):
-                        res.statusCode = 400;
-                        res.setHeader("Content-Type", "application/json");
+                        res.writeHead(400);
                         res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
                         res.end();
                         break;
                     case (movie["Response"] === "False"):
-                        res.statusCode = 404;
-                        res.setHeader("Content-Type", "application/json"); 
+                        res.writeHead(404);
                         res.write(JSON.stringify({ message: movie["Error"] }));
                         res.end();
                         break;
                     case (!body || body.length === 0):
-                        res.statusCode = 400;
+                        res.writeHead(400);
                         res.write(JSON.stringify({ error: true, message: "You must supply an image file!" }));
                         res.end();
                         break;
                     case (!imgExtRegex.test(fileType["ext"])):
-                        res.statusCode = 400;
-                        res.setHeader("Content-Type", "application/json");  
+                        res.writeHead(400);
                         res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
                         res.end();
                         break;
                     case (existsSync(filePath)):
-                        res.statusCode = 400;
-                        res.setHeader("Content-Type", "application/json");
+                        res.writeHead(400);
                         res.write(JSON.stringify({
                             "error": true,
                             "message": "Poster for this movie already exists!"
@@ -248,8 +226,8 @@ const routing =  async (req, res) => {
                             
                             console.log("Data written successfully to file path.");         
                         });
-                        res.statusCode = 201;
-                        res.setHeader("Content-Type", "application/json");
+
+                        res.writeHead(201);
                         res.write(JSON.stringify({
                             "error": false,
                             "message": "Poster Uploaded Successfully!"
@@ -258,13 +236,13 @@ const routing =  async (req, res) => {
                         break;
                 }
             } catch (err) {
-                res.statusCode = 500;
-                res.setHeader("Content-Type", "application/json");
+                res.writeHead(500);
                 res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
             }
         })
     } else {
         // No page matched the url
+        res.writeHead(404);
         res.write("No matching page");
         res.end();
     }

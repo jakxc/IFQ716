@@ -3,7 +3,8 @@ h1 {
 }
 
 input, select {
-  width:100%;
+  width:25rem;
+  max-width: 100%;
   border:2px solid #000000;
   border-radius:5px;
   margin:3px 0;
@@ -63,7 +64,6 @@ input:focus, select:focus{
 .app {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
 }
 
 .container {
@@ -71,7 +71,7 @@ input:focus, select:focus{
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 5rem;
+  gap: 2rem;
 }
 
 .form {
@@ -92,11 +92,12 @@ input:focus, select:focus{
 }
 
 .content-container {
-  height: 50rem;
-  width: 80rem;
+  height: 30rem;
+  width: 85rem;
   max-width: 100%;
+  max-height: 100%;
   padding: 20px;
-  border: 5px solid #a0c7e4;
+  border: 2px solid #a0c7e4;
 
   display: flex;
   justify-content: center;

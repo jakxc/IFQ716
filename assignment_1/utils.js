@@ -1,5 +1,4 @@
 import * as dotenv from 'dotenv';
-import { writeFileSync } from 'fs';
 
 dotenv.config();
 
@@ -14,13 +13,12 @@ export const getMovieByTitle = async (title, currentPage = 1) => {
         const res = await fetch(`${IMDB_URL}/?apikey=${IMDB_API_KEY}&s=${title}&page=${currentPage}`);
         const data = await res.json();
         console.log(data);
-        // if (data["Error"]) throw Error(data["Error"])
         currentPage = parseInt(currentPage);
         return data["totalResults"] 
         ? { 
             ...data, 
-            previous: currentPage <= 1 ? null : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage - 1}`, 
-            next: currentPage >= Math.ceil(parseInt(data["totalResults"]) / 10) ? null : `${IMDB_URL}/?apikey=[yourkey]&s=${title}&page=${currentPage + 1}` }
+            previous: currentPage <= 1 ? null : `http://localhost:3000/movies/search?title=${title}&page=${currentPage - 1}`, 
+            next: currentPage >= Math.ceil(parseInt(data["totalResults"]) / 10) ? null : `http://localhost:3000/movies/search?title=${title}&page=${currentPage + 1}` }
         : data;
     } catch (err) {
         console.log(err);
@@ -88,7 +86,7 @@ export const getMovieId = (movie) => {
 }
 
 export const getMoviePoster = (movie) => {
-    if (!movie["Poster"]) {
+    if (!movie["Poster"] || movie["Poster"] === "N/A") {
         return null;
     } 
     
@@ -108,16 +106,12 @@ export const convertUrlToBuffer =  async (url) => {
     }
 }
 
-export const writeToFile = (path, data) => {
-    // Write the data to the filesystem
-    writeFileSync(path, data, (err) => {
-        if (err) {
-            console.log(err)
-            throw err;
-        }
-        
-        console.log("Data written successfully to file path.");
-    });
-}
+export const handleResponse = (res, statusCode, contentType, content, encoding="") => {
+    res.setHeader("Content-Type", contentType);
+    res.writeHead(statusCode);
+    res.write(content, encoding);
+    res.end();
+} 
+
 
 

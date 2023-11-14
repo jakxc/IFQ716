@@ -8,6 +8,7 @@ import {
     combineMovieData,
     getMoviePoster,
     convertUrlToBuffer,
+    handleResponse
  } from "./utils.js"
 
 const PORT = process.env.PORT || 3000;
@@ -16,6 +17,7 @@ const routing =  async (req, res) => {
     const url = req.url;
     const method = req.method;
 
+     // /movies/search?title={title}&page={page} : GET
     if ((url.match(/\/movies\/search\?([a-zA-Z0-9])/) || url.startsWith("/movies/search")) && method.toLowerCase() === "get") { 
         res.setHeader("Access-Control-Allow-Origin", "*");   
         res.setHeader("Content-Type", "application/json"); 
@@ -28,34 +30,33 @@ const routing =  async (req, res) => {
            
             switch (true) {
                 case (!title || title.length === 0):
-                    res.writeHead(400);
-                    res.write(JSON.stringify({ error: true, message: "You must supply a title!" }));
-                    res.end();
+                    handleResponse(res, 400, "application/json", JSON.stringify({ 
+                        error: true, 
+                        message: "You must supply a title!" 
+                    }))
                     break;
                 case (!parseInt(page) ): 
-                    res.writeHead(400);
-                    res.write(JSON.stringify({ error: true, message: "You must supply a valid page number!" }));
-                    res.end();
+                    handleResponse(res, 400, "application/json", JSON.stringify({ 
+                        error: true,
+                        message: "You must supply a valid page number!" 
+                    }))
                     break;
                 case (!movies["totalResults"]):
-                    res.writeHead(404);
-                    res.write(JSON.stringify({ message: `${movies["Error"]}` }));
-                    res.end();
+                    handleResponse(res, 404, "application/json", JSON.stringify({ message: movies["Error"] || "Movie/s not found!" }))
                     break;
                 default:
-                    res.writeHead(200);
-                    res.write(JSON.stringify(movies));
-                    res.end();
+                    handleResponse(res, 200, "application/json", JSON.stringify(movies))
                     break;
             }
 
         } catch (err) {
-            res.writeHead(500);
-            res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
+            handleResponse(res, 500, "application/json", JSON.stringify({ error: true, message: "An unexpected error has occured!" }))
+            console.log(err["message"]);
         }
+
+        // /movies/data?id={id}&country={country} : GET
     } else if ((url.match(/\/movies\/data\?([a-zA-Z0-9])/) || url.startsWith("/movies/data")) && method.toLowerCase() === "get") {
         res.setHeader("Access-Control-Allow-Origin", "*");   
-        res.setHeader("Content-Type", "application/json");
 
         try {
             // get id from url
@@ -68,29 +69,26 @@ const routing =  async (req, res) => {
 
             switch (true) {
                 case (!id || id.length === 0):
-                    res.writeHead(400);
-                    res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
-                    res.end();
+                    handleResponse(res, 400, "application/json", JSON.stringify({ 
+                        error: true,
+                        message: "You must supply an imdbID!" 
+                    }));
                     break;
                 case (movie["Response"] === "False"):
-                    res.writeHead(404);
-                    res.write(JSON.stringify({ message: movie["Error"] }));
-                    res.end();
+                    handleResponse(res, 404, "application/json", JSON.stringify({ message: movie["Error"] || "Movie not found!" }));
                     break;
                 default:
                     const filteredStreamingData = { 
                         ...combinedData, 
                          streamingInfo: country ? { [country]: combinedData["streamingInfo"][country] } : combinedData["streamingInfo"]}
-                    res.writeHead(200);
-                    res.write(JSON.stringify(filteredStreamingData));
-                    res.end();
+                    handleResponse(res, 200, "application/json", JSON.stringify(filteredStreamingData));
                     break;
             }
         } catch (err) {
-            // send the error
-            res.writeHead(500);
-            res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
+            handleResponse(res, 500, "application/json", JSON.stringify({ error: true, message: "An unexpected error has occured!" }))
+            console.log(err["message"]);
         }
+        // /posters/:id : GET
     } else if ((url.match(/\/posters\/([a-zA-Z0-9])/) || url.startsWith("/posters/")) && method.toLowerCase() === "get") {    
         res.setHeader("Access-Control-Allow-Origin", "*");   
 
@@ -102,22 +100,16 @@ const routing =  async (req, res) => {
 
             switch (true) {
                 case (!id || id.length === 0):
-                    res.setHeader("Content-Type", "application/json");
-                    res.writeHead(400);
-                    res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
-                    res.end();
+                    handleResponse(res, 400, "application/json", JSON.stringify({ 
+                        error: true, 
+                        message: "You must supply an imdbID!" 
+                    }));
                     break;
                 case (movie["Response"] === "False"):
-                    res.setHeader("Content-Type", "application/json"); 
-                    res.writeHead(404);
-                    res.write(JSON.stringify({ message: movie["Error"] }));
-                    res.end();
+                    handleResponse(res, 404, "application/json", JSON.stringify({ message: movie["Error"] || "Movie not found!" }));
                     break;
                 case (!existsSync(filePath) && !posterUrl):
-                    res.setHeader("Content-Type", "application/json");
-                    res.writeHead(404);
-                    res.write(JSON.stringify({ message: "Poster not found!" }));
-                    res.end();
+                    handleResponse(res, 404, "application/json", JSON.stringify({ message: "Poster not found!" }));
                     break;
                 case (existsSync(filePath)): 
                     readFile(filePath, "binary", (err, data) => {
@@ -126,10 +118,7 @@ const routing =  async (req, res) => {
                             throw err;
                         };
 
-                        res.setHeader("Content-Type", "image/png");
-                        res.writeHead(200);
-                        res.write(data, "binary");
-                        res.end();
+                        handleResponse(res, 200, "image/png", data, "binary");
                     });
                     break;
                 default:
@@ -138,10 +127,10 @@ const routing =  async (req, res) => {
                     const imgExtRegex = new RegExp(/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF)$/);
 
                     if (!imgExtRegex.test(fileType["ext"])) {
-                        res.setHeader("Content-Type", "application/json");
-                        res.writeHead(400);
-                        res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
-                        res.end();
+                        handleResponse(res, 400, "application/json", JSON.stringify({ 
+                            error: true, 
+                            message: "Incorrect file type!" 
+                        }));
                     } else {
                         writeFileSync(filePath, buffer, (err) => {
                             if (err) {
@@ -157,19 +146,23 @@ const routing =  async (req, res) => {
                                 throw err;
                             };
 
-                            res.setHeader("Content-Type", "image/png");
-                            res.writeHead(200);
-                            res.write(data, "binary");
-                            res.end();
+                            // res.setHeader("Content-Type", "image/png");
+                            // res.writeHead(200);
+                            // res.write(data, "binary");
+                            // res.end();
+                            handleResponse(res, 200, "image/png", data, "binary");
                         });
                     }
                     break;
             }
         } catch (err) {
-            res.setHeader("Content-Type", "application/json");
-            res.writeHead(500);
-            res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
+            handleResponse(res, 500, "application/json", JSON.stringify({ 
+                error: true, 
+                message: "An unexpected error has occured!" 
+            }))
+            console.log(err["message"]);
         }
+        // /posters/add/:id : POST
     } else if ((url.match(/\/posters\/add\/([a-zA-Z0-9])/) || url.startsWith("/posters/add"))) {
         if (method.toLowerCase() == "options") {
             res.writeHead(200, {
@@ -198,32 +191,29 @@ const routing =  async (req, res) => {
                 try {
                     switch (true) {
                         case (!id || id.length === 0):
-                            res.writeHead(400);
-                            res.write(JSON.stringify({ error: true, message: "You must supply an imdbID!" }));
-                            res.end();
+                            handleResponse(res, 400, "application/json", JSON.stringify({ 
+                                error: true, 
+                                message: "You must supply an imdbID!" 
+                            }));
                             break;
                         case (movie["Response"] === "False"):
-                            res.writeHead(404);
-                            res.write(JSON.stringify({ message: movie["Error"] }));
-                            res.end();
+                            handleResponse(res, 404, "application/json", JSON.stringify({ 
+                                message: movie["Error"] || "Movie not found!" 
+                            }));
                             break;
                         case (!body || body.length === 0):
-                            res.writeHead(400);
-                            res.write(JSON.stringify({ error: true, message: "You must supply an image file!" }));
-                            res.end();
+                            handleResponse(res, 400, "application/json",JSON.stringify({ 
+                                error: true, 
+                                message: "You must supply an image file!" 
+                            }));
                             break;
                         case (!imgExtRegex.test(fileType["ext"])):
-                            res.writeHead(400);
-                            res.write(JSON.stringify({ error: true, message: "Incorrect file type!" }));
-                            res.end();
+                            handleResponse(res, 400, "application/json",JSON.stringify({ 
+                                error: true, 
+                                message: "Incorrect file type!" }));
                             break;
                         case (existsSync(filePath)):
-                            res.writeHead(400);
-                            res.write(JSON.stringify({
-                                "error": true,
-                                "message": "Poster for this movie already exists!"
-                            }));
-                            res.end();  
+                            handleResponse(res, 400, "application/json",JSON.stringify({ error: true, message: "Poster for this movie already exists!" }));
                             break;
                         default: 
                             writeFileSync(filePath, buffer, (err) => {
@@ -235,17 +225,15 @@ const routing =  async (req, res) => {
                                 console.log("Data written successfully to file path.");         
                             });
 
-                            res.writeHead(201);
-                            res.write(JSON.stringify({
+                            handleResponse(res, 201, "application/json", JSON.stringify({
                                 "error": false,
                                 "message": "Poster Uploaded Successfully!"
                             }));
-                            res.end();  
                             break;
                     }
                 } catch (err) {
-                    res.writeHead(500);
-                    res.end(JSON.stringify({ error: true, message: err["message"] || "Unknown error occured!" }));
+                    handleResponse(res, 500, "application/json", JSON.stringify({ error: true, message: "An unexpected error has occured!" }))
+                    console.log(err["message"]);
                 }
             })
         }

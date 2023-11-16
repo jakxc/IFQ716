@@ -168,7 +168,7 @@ const routing =  async (req, res) => {
             res.writeHead(200, {
               "Access-Control-Allow-Origin": "*",
               "Access-Control-Allow-Headers": "Content-Type",
-              "Access-Control-Allow-Methods": "OPTIONS, DELETE",
+              "Access-Control-Allow-Methods": "OPTIONS, POST",
             });
             res.end();
         }
@@ -227,7 +227,7 @@ const routing =  async (req, res) => {
 
                             handleResponse(res, 201, "application/json", JSON.stringify({
                                 "error": false,
-                                "message": "Poster Uploaded Successfully!"
+                                "message": "Poster uploaded successfully!"
                             }));
                             break;
                     }
@@ -239,8 +239,7 @@ const routing =  async (req, res) => {
         }
     } else {
         // No page matched the url
-        res.write("No matching page");
-        res.end();
+        handleResponse(res, 404, "application/json", JSON.stringify({"message":"Route not found"}))
     }
 }
 

@@ -73,9 +73,11 @@ function App() {
       .finally(() => setLoading(false));
     } else if (method === "POST") {
       fetch(apiUrl, {
-        method: "POST", // *GET, POST, PUT, DELETE, etc.
+        method: "POST", 
+        // enctype: 'multipart/form-data',// *GET, POST, PUT, DELETE, etc.
         headers: {
           "Content-Type": "image/png",
+         
         },
         body: formData.file,
       })

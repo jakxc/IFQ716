@@ -10,21 +10,33 @@ router.get("/", function (req, res, next) {
 router.get("/api/city", function (req, res, next) {
   const name = req.query.name
   const countryCode = req.query.countryCode; //either a value or undefined
-  const limit = req.query.limit;
+  const limit = req.query.limit || 20;
 
-  if (name || countryCode) {
+  if (countryCode && name) {
+    const conditionsBuilder = (builder) => {
+      return builder.where("CountryCode", countryCode).where("Name", name);
+    };
+
     req.db
-    .from("city")
-    .select("*")
-    .where("CountryCode", countryCode)
+    .from('city')
+    .select('*')
+    .where(conditionsBuilder)
+    .limit(limit)
     .then((rows) => {
-      const limitedRows = rows.slice(0, limit);
-      res.json({ Error: false, Message: "Success", City: limitedRows });
+      res.json({ Error: false, Message: 'Success', City: rows });
     })
-    .catch((err) => {
-      console.log(err);
-      res.json({ Error: true, Message: "Error in MySQL query" });
-    });
+    .catch((err) => res.json({ Error: true, Message: 'Error in MySQL query' }));
+  } else if (countryCode) {
+    req.db
+    .from('city')
+    .select('*')
+    .where("CountryCode", countryCode)
+    .orderBy("Name")
+    .limit(limit)
+    .then((rows) => {
+      res.json({ Error: false, Message: 'Success', City: rows });
+    })
+    .catch((err) => res.json({ Error: true, Message: 'Error in MySQL query' }));
   } else {
     req.db
     .from("city")

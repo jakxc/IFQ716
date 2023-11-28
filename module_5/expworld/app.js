@@ -10,6 +10,8 @@ const cors = require('cors');
 
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
+const swaggerUI = require('swagger-ui-express');
+const swaggerDocument = require('./docs/openapi.json');
 
 var app = express();
 
@@ -31,6 +33,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
+app.use('/docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument))
 
 app.get("/knex", function (req, res, next) {
     req.db
